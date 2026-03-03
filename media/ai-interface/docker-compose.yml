@@ -2,25 +2,45 @@ version: '3.8'
 services:
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
-    container_name: open-webui
-    restart: unless-stopped
-    ports:
-      - "3005:8080"
     environment:
       - OLLAMA_BASE_URL=http://${ARCH_PC_IP:-192.168.1.100}:11434
     volumes:
       - ./data/open-webui:/app/backend/data
+    networks:
+      - traefik_proxy
+    deploy:
+      placement:
+        constraints:
+          - node.role == worker
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.openwebui.rule=Host(`ai.example.com`)"
+        - "traefik.http.routers.openwebui.entrypoints=websecure"
+        - "traefik.http.services.openwebui.loadbalancer.server.port=8080"
   openclaw-gateway:
     image: openclaw/gateway:latest
-    container_name: openclaw-gateway
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
     volumes:
       - ./openclaw/config:/app/config
+    networks:
+      - traefik_proxy
+    deploy:
+      placement:
+        constraints:
+          - node.role == worker
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.openclaw.rule=Host(`gateway.example.com`)"
+        - "traefik.http.routers.openclaw.entrypoints=websecure"
+        - "traefik.http.services.openclaw.loadbalancer.server.port=8000"
   openclaw-cli:
     image: openclaw/cli:latest
-    container_name: openclaw-cli
-    restart: unless-stopped
     volumes:
       - ./openclaw/config:/root/.openclaw
+    deploy:
+      placement:
+        constraints:
+          - node.role == worker
+
+networks:
+  traefik_proxy:
+    external: true

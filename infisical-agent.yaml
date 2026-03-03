@@ -8,6 +8,11 @@ infisical:
       client-id: ""
       client-secret: ""
 
+  cache:
+    backend: "local"
+    path: "/var/lib/infisical/cache"
+    ttl: "168h" # Cache secrets for 1 week offline
+
   templates:
     - source-path: "/opt/stacks/vaultwarden/vaultwarden.env.tmpl"
       destination-path: "/opt/stacks/vaultwarden/.env"
@@ -15,3 +20,21 @@ infisical:
       exec:
         command: "cd /opt/stacks/vaultwarden && docker compose up -d"
         restart-on-error: true
+
+    - source-path: "/opt/stacks/media/media-arr/.env.tmpl"
+      destination-path: "/opt/stacks/media/media-arr/prod.env"
+      config:
+        env: "prod"
+      exec:
+        command: "cd /opt/stacks/media/media-arr && docker compose up -d"
+        restart-on-error: true
+
+    - source-path: "/opt/stacks/media/media-arr/.env.tmpl"
+      destination-path: "/opt/stacks/media/media-arr/staging.env"
+      config:
+        env: "staging"
+      exec:
+        # Assuming staging is deployed via Portainer/GitOps we don't necessarily 
+        # want the agent doing `docker compose up -d` for staging here, 
+        # or we could trigger a portainer webhook. Let's just create the env file.
+        command: "echo 'Staging env updated'"

@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  gluetun:
+  gluetun-staging:
     image: qmcgaw/gluetun
     
     cap_add:
@@ -8,12 +8,17 @@ services:
     devices:
       - /dev/net/tun:/dev/net/tun
     ports:
-      - "8090:8090" # qbittorrent
+      - "8091:8090" # qbittorrent staging port
     volumes:
-      - ./gluetun/custom-ovpn-files:/gluetun
+      - ./gluetun-staging/custom-ovpn-files:/gluetun
     environment:
       - VPN_SERVICE_PROVIDER=custom
       - VPN_TYPE=openvpn
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=Etc/UTC
+    env_file:
+      - staging.env
     
     healthcheck:
       test: ["CMD", "curl", "-s", "https://cloudflare.com/cdn-cgi/trace"]
@@ -23,21 +28,24 @@ services:
     networks:
       - traefik_proxy
       - internal
-  qbittorrent:
+
+  qbittorrent-staging:
     image: lscr.io/linuxserver/qbittorrent:latest
     
-    network_mode: "service:gluetun"
+    network_mode: "service:gluetun-staging"
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=Etc/UTC
       - WEBUI_PORT=8090
+    env_file:
+      - staging.env
     volumes:
-      - ./data/qbittorrent/config:/config
-      - ./data/downloads:/downloads
+      - ./data-staging/qbittorrent/config:/config
+      - ./data-staging/downloads:/downloads
     
     depends_on:
-      gluetun:
+      gluetun-staging:
         condition: service_healthy
     deploy:
       replicas: 0 # Run manually on local machine, swarm networking doesn't allow 'service:x' cleanly without host constraints. Or use placement.
@@ -52,21 +60,28 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  jellyfin:
+
+  jellyfin-staging:
     image: lscr.io/linuxserver/jellyfin:latest
     
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=Etc/UTC
+    env_file:
+      - staging.env
     volumes:
-      - ./data/jellyfin/config:/config
-      - ./data/media:/data/media
+      - ./data-staging/jellyfin/config:/config
+      - ./data-staging/media:/data/media
     
     networks:
       - traefik_proxy
       - internal
     deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.jellyfin-staging.rule=Host(`beta.jellyfin.${BASE_DOMAIN}`)"
+        - "traefik.http.services.jellyfin-staging.loadbalancer.server.port=8096"
       placement:
         constraints:
           - node.role == worker
@@ -78,46 +93,67 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-  sonarr:
+
+  sonarr-staging:
     image: lscr.io/linuxserver/sonarr:latest
     
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=Etc/UTC
+    env_file:
+      - staging.env
     volumes:
-      - ./data/sonarr/config:/config
-      - ./data/media/tv:/tv
-      - ./data/downloads:/downloads
-    
+      - ./data-staging/sonarr/config:/config
+      - ./data-staging/media/tv:/tv
+      - ./data-staging/downloads:/downloads
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sonarr-staging.rule=Host(`beta.sonarr.${BASE_DOMAIN}`)"
+        - "traefik.http.services.sonarr-staging.loadbalancer.server.port=8989"
     networks:
       - traefik_proxy
       - internal
-  radarr:
+
+  radarr-staging:
     image: lscr.io/linuxserver/radarr:latest
     
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=Etc/UTC
+    env_file:
+      - staging.env
     volumes:
-      - ./data/radarr/config:/config
-      - ./data/media/movies:/movies
-      - ./data/downloads:/downloads
-    
+      - ./data-staging/radarr/config:/config
+      - ./data-staging/media/movies:/movies
+      - ./data-staging/downloads:/downloads
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.radarr-staging.rule=Host(`beta.radarr.${BASE_DOMAIN}`)"
+        - "traefik.http.services.radarr-staging.loadbalancer.server.port=7878"
     networks:
       - traefik_proxy
       - internal
-  prowlarr:
+
+  prowlarr-staging:
     image: lscr.io/linuxserver/prowlarr:latest
     
     environment:
       - PUID=${PUID}
       - PGID=${PGID}
       - TZ=Etc/UTC
+    env_file:
+      - staging.env
     volumes:
-      - ./data/prowlarr/config:/config
-    
+      - ./data-staging/prowlarr/config:/config
+    deploy:
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.prowlarr-staging.rule=Host(`beta.prowlarr.${BASE_DOMAIN}`)"
+        - "traefik.http.services.prowlarr-staging.loadbalancer.server.port=9696"
     networks:
       - traefik_proxy
       - internal
