@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   socket-proxy:
     image: tecnativa/docker-socket-proxy
@@ -19,7 +17,16 @@ services:
       placement:
         constraints:
           - node.role == manager
-          - node.role == manager
+      resources:
+        limits:
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - socket-proxy
       - traefik_proxy
@@ -35,11 +42,11 @@ services:
       placement:
         constraints:
           - node.role == manager
+      resources:
+        limits:
+          memory: 256M
       restart_policy:
         condition: on-failure
-
-    security_opt:
-      - no-new-privileges:true
     ports:
       - target: 80
         published: 80
@@ -56,9 +63,20 @@ services:
       - "--providers.docker.swarmMode=true"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/etc/traefik/acme/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      - "--ping=true"
     networks:
       - traefik_proxy
       - socket-proxy
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 10s

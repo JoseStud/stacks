@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   homarr:
     image: ghcr.io/homarr-org/homarr:latest
@@ -15,18 +13,27 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        order: stop-first
+        order: start-first
       placement:
         constraints:
-          - node.role == worker
+          - node.labels.location == cloud
+      resources:
+        limits:
+          memory: 256M
       restart_policy:
         condition: on-failure
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.homarr.rule=Host(`home.${BASE_DOMAIN}`)"
         - "traefik.http.routers.homarr.entrypoints=websecure"
+        - "traefik.http.routers.homarr.tls.certresolver=letsencrypt"
         - "traefik.http.routers.homarr.middlewares=authelia@docker"
         - "traefik.http.services.homarr.loadbalancer.server.port=7575"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:7575/api/health"]
       interval: 30s
@@ -45,18 +52,27 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        order: stop-first
+        order: start-first
       placement:
         constraints:
           - node.role == manager
+      resources:
+        limits:
+          memory: 256M
       restart_policy:
         condition: on-failure
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.portainer.rule=Host(`portainer.${BASE_DOMAIN}`)"
         - "traefik.http.routers.portainer.entrypoints=websecure"
+        - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
         - "traefik.http.routers.portainer.middlewares=authelia@docker"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
       interval: 30s
@@ -76,8 +92,16 @@ services:
         delay: 10s
         order: start-first
       mode: global
+      resources:
+        limits:
+          memory: 128M
       restart_policy:
         condition: on-failure
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
   traefik_proxy:

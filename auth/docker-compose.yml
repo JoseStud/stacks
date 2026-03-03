@@ -1,27 +1,42 @@
-version: '3.8'
-
 services:
   authelia:
     image: authelia/authelia
-    container_name: authelia
-    restart: unless-stopped
     volumes:
-      - ./data/authelia/config:/config
+      - /mnt/swarm-shared/auth/authelia/config:/config
     networks:
       - traefik_proxy
     deploy:
       update_config:
         parallelism: 1
         delay: 10s
-        order: stop-first
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.authelia.rule=Host(`auth.domain.com`)"
-      - "traefik.http.routers.authelia.entrypoints=websecure"
-      - "traefik.http.services.authelia.loadbalancer.server.port=9091"
-      - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https%3A%2F%2Fauth.domain.com%2F"
-      - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
-      - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+        order: start-first
+      placement:
+        constraints:
+          - node.labels.location == cloud
+      resources:
+        limits:
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.authelia.rule=Host(`auth.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.authelia.entrypoints=websecure"
+        - "traefik.http.routers.authelia.tls.certresolver=letsencrypt"
+        - "traefik.http.services.authelia.loadbalancer.server.port=9091"
+        - "traefik.http.middlewares.authelia.forwardauth.address=http://authelia:9091/api/verify?rd=https%3A%2F%2Fauth.${BASE_DOMAIN}%2F"
+        - "traefik.http.middlewares.authelia.forwardauth.trustForwardHeader=true"
+        - "traefik.http.middlewares.authelia.forwardauth.authResponseHeaders=Remote-User,Remote-Groups,Remote-Name,Remote-Email"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9091/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   traefik_proxy:

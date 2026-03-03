@@ -1,35 +1,50 @@
-version: '3.8'
-
 services:
   prometheus:
     image: prom/prometheus:latest
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - /mnt/swarm-shared/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
     networks:
       - traefik_proxy
     deploy:
       update_config:
         parallelism: 1
         delay: 10s
-        order: stop-first
+        order: start-first
       placement:
         constraints:
-          - node.role == worker # Don't run on Bastion to prevent OOM
+          - node.labels.location == cloud
+      resources:
+        limits:
+          memory: 1G
       restart_policy:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.prometheus.rule=Host(`prometheus.example.com`)"
-
+        - "traefik.http.routers.prometheus.rule=Host(`prometheus.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.prometheus.entrypoints=websecure"
+        - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.prometheus.middlewares=authelia@docker"
+        - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   loki:
     image: grafana/loki:latest
     volumes:
-      - ./loki:/etc/loki
+      - /mnt/swarm-shared/observability/loki:/etc/loki:ro
       - loki_data:/tmp/loki
     networks:
       - traefik_proxy
@@ -37,20 +52,32 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        order: stop-first
+        order: start-first
       placement:
         constraints:
-          - node.role == worker # Don't run on Bastion to prevent OOM
+          - node.labels.location == cloud
+      resources:
+        limits:
+          memory: 1G
       restart_policy:
         condition: on-failure
-
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   promtail:
     image: grafana/promtail:latest
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./promtail/promtail.yml:/etc/promtail/promtail.yml
+      - /mnt/swarm-shared/observability/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
     command: -config.file=/etc/promtail/promtail.yml
     networks:
       - traefik_proxy
@@ -60,9 +87,21 @@ services:
         delay: 10s
         order: start-first
       mode: global
+      resources:
+        limits:
+          memory: 128M
       restart_policy:
         condition: on-failure
-
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9080/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -83,14 +122,26 @@ services:
         delay: 10s
         order: start-first
       mode: global
+      resources:
+        limits:
+          memory: 128M
       restart_policy:
         condition: on-failure
-
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   grafana:
     image: grafana/grafana:latest
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD}
     volumes:
       - grafana_data:/var/lib/grafana
     networks:
@@ -99,17 +150,32 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        order: stop-first
+        order: start-first
       placement:
         constraints:
-          - node.role == worker
+          - node.labels.location == cloud
+      resources:
+        limits:
+          memory: 512M
       restart_policy:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.grafana.rule=Host(`grafana.example.com`)"
+        - "traefik.http.routers.grafana.rule=Host(`grafana.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.grafana.entrypoints=websecure"
+        - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.grafana.middlewares=authelia@docker"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
-
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 networks:
   traefik_proxy:
@@ -117,5 +183,20 @@ networks:
 
 volumes:
   prometheus_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/swarm-shared/observability/prometheus_data
   loki_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/swarm-shared/observability/loki_data
   grafana_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/swarm-shared/observability/grafana_data
