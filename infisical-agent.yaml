@@ -21,13 +21,3 @@ infisical:
         command: "cd /opt/stacks/vaultwarden && docker compose up -d"
         restart-on-error: true
 
-
-    - source-path: "/opt/stacks/media/media-arr/.env.tmpl"
-      destination-path: "/opt/stacks/media/media-arr/staging.env"
-      config:
-        env: "staging"
-      exec:
-        # Assuming staging is deployed via Portainer/GitOps we don't necessarily 
-        # want the agent doing `docker compose up -d` for staging here, 
-        # or we could trigger a portainer webhook. Let's just create the env file.
-        command: "echo 'Staging env updated'"
