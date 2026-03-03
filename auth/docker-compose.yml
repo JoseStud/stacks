@@ -1,6 +1,10 @@
 services:
   authelia:
     image: authelia/authelia
+    environment:
+      - AUTHELIA_JWT_SECRET=${AUTHELIA_JWT_SECRET}
+      - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET}
+      - AUTHELIA_STORAGE_POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
     volumes:
       - /mnt/swarm-shared/auth/authelia/config:/config
     networks:

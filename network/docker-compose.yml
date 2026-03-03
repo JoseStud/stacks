@@ -87,7 +87,7 @@ services:
   pihole-1:
     image: pihole/pihole:latest
     environment:
-      - TZ=Etc/UTC
+      - TZ=${TZ}
       - WEBPASSWORD=${PIHOLE_PASSWORD}
       - PIHOLE_DNS_=1.1.1.1;8.8.8.8
       - DNSMASQ_LISTENING=all
@@ -141,7 +141,7 @@ services:
   pihole-2:
     image: pihole/pihole:latest
     environment:
-      - TZ=Etc/UTC
+      - TZ=${TZ}
       - WEBPASSWORD=${PIHOLE_PASSWORD}
       - PIHOLE_DNS_=1.1.1.1;8.8.8.8
       - DNSMASQ_LISTENING=all

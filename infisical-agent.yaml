@@ -2,6 +2,7 @@
 # Managed by Ansible
 
 infisical:
+  address: https://app.infisical.com
   auth:
     type: "universal-auth"
     config:
@@ -14,10 +15,75 @@ infisical:
     ttl: "168h" # Cache secrets for 1 week offline
 
   templates:
-    - source-path: "/opt/stacks/vaultwarden/vaultwarden.env.tmpl"
-      destination-path: "/opt/stacks/vaultwarden/.env"
-      # Auto-Healing: Agent fetches secrets on interval or webhook
+    # Gateway — Traefik + socket-proxy (Cloudflare DNS challenge)
+    - source-path: "/opt/stacks/gateway/.env.tmpl"
+      destination-path: "/opt/stacks/gateway/.env"
+      config:
+        polling-interval: 60s
       exec:
-        command: "cd /opt/stacks/vaultwarden && docker compose up -d"
-        restart-on-error: true
+        command: "docker stack deploy -c /opt/stacks/gateway/docker-compose.yml gateway"
+        timeout: 60
+
+    # Identity — Authelia SSO
+    - source-path: "/opt/stacks/auth/.env.tmpl"
+      destination-path: "/opt/stacks/auth/.env"
+      config:
+        polling-interval: 60s
+      exec:
+        command: "docker stack deploy -c /opt/stacks/auth/docker-compose.yml auth"
+        timeout: 60
+
+    # Management — Homarr + Portainer
+    - source-path: "/opt/stacks/management/.env.tmpl"
+      destination-path: "/opt/stacks/management/.env"
+      config:
+        polling-interval: 60s
+      exec:
+        command: "docker stack deploy -c /opt/stacks/management/docker-compose.yml management"
+        timeout: 60
+
+    # Network — Vaultwarden + Pi-hole + Orbital Sync
+    - source-path: "/opt/stacks/network/.env.tmpl"
+      destination-path: "/opt/stacks/network/.env"
+      config:
+        polling-interval: 60s
+      exec:
+        command: "docker stack deploy -c /opt/stacks/network/docker-compose.yml network"
+        timeout: 60
+
+    # Observability — Prometheus + Loki + Grafana
+    - source-path: "/opt/stacks/observability/.env.tmpl"
+      destination-path: "/opt/stacks/observability/.env"
+      config:
+        polling-interval: 60s
+      exec:
+        command: "docker stack deploy -c /opt/stacks/observability/docker-compose.yml observability"
+        timeout: 60
+
+    # AI Interface — Open WebUI + OpenClaw
+    - source-path: "/opt/stacks/media/ai-interface/.env.tmpl"
+      destination-path: "/opt/stacks/media/ai-interface/.env"
+      config:
+        polling-interval: 60s
+      exec:
+        command: "docker stack deploy -c /opt/stacks/media/ai-interface/docker-compose.yml ai-interface"
+        timeout: 60
+
+    # Uptime — Uptime Kuma
+    - source-path: "/opt/stacks/uptime/.env.tmpl"
+      destination-path: "/opt/stacks/uptime/.env"
+      config:
+        polling-interval: 60s
+      exec:
+        command: "docker stack deploy -c /opt/stacks/uptime/docker-compose.yml uptime"
+        timeout: 60
+
+    # Cloud — FileBrowser
+    - source-path: "/opt/stacks/cloud/.env.tmpl"
+      destination-path: "/opt/stacks/cloud/.env"
+      config:
+        polling-interval: 60s
+      exec:
+        command: "docker stack deploy -c /opt/stacks/cloud/docker-compose.yml cloud"
+        timeout: 60
 
