@@ -9,6 +9,11 @@ services:
       - ./data/authelia/config:/config
     networks:
       - traefik_proxy
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.authelia.rule=Host(`auth.domain.com`)"

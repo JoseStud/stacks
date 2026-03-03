@@ -41,11 +41,16 @@ services:
         condition: service_healthy
     deploy:
       replicas: 0 # Run manually on local machine, swarm networking doesn't allow 'service:x' cleanly without host constraints. Or use placement.
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
       placement:
         constraints:
           - node.role == worker
           - node.labels.location == local
       restart_policy:
+        condition: on-failure
         condition: on-failure
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8090/"]
@@ -67,11 +72,16 @@ services:
       - traefik_proxy
       - internal
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
       placement:
         constraints:
           - node.role == worker
           - node.labels.location == local
       restart_policy:
+        condition: on-failure
         condition: on-failure
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8096/health"]

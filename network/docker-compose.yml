@@ -1,0 +1,203 @@
+version: '3.8'
+
+services:
+  # ──────────────────────────────────────────────
+  # Vaultwarden — Bitwarden-compatible password manager
+  # Uses PostgreSQL backend to avoid SQLite corruption on GlusterFS
+  # ──────────────────────────────────────────────
+  vaultwarden:
+    image: vaultwarden/server:latest
+    environment:
+      - DOMAIN=https://vault.${BASE_DOMAIN}
+      - DATABASE_URL=postgresql://vaultwarden:${VW_DB_PASS}@vaultwarden-db:5432/vaultwarden
+      - SIGNUPS_ALLOWED=false
+      - ADMIN_TOKEN=${VW_ADMIN_TOKEN}
+      - WEBSOCKET_ENABLED=true
+    volumes:
+      - /mnt/swarm-shared/network/vaultwarden/data:/data
+    networks:
+      - traefik_proxy
+      - vaultwarden_internal
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      placement:
+        constraints:
+          - node.role == worker
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.vaultwarden.rule=Host(`vault.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.vaultwarden.entrypoints=websecure"
+        - "traefik.http.routers.vaultwarden.middlewares=authelia@docker"
+        - "traefik.http.services.vaultwarden.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/alive"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  vaultwarden-db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=vaultwarden
+      - POSTGRES_PASSWORD=${VW_DB_PASS}
+      - POSTGRES_DB=vaultwarden
+    volumes:
+      - vaultwarden_db_data:/var/lib/postgresql/data
+    networks:
+      - vaultwarden_internal
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      placement:
+        constraints:
+          - node.role == worker
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vaultwarden"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  # ──────────────────────────────────────────────
+  # Pi-hole HA — Two instances pinned to each OCI node
+  # Host-mode UDP ports bypass Swarm ingress mesh (unreliable for DNS)
+  # ──────────────────────────────────────────────
+  pihole-1:
+    image: pihole/pihole:latest
+    environment:
+      - TZ=Etc/UTC
+      - WEBPASSWORD=${PIHOLE_PASSWORD}
+      - PIHOLE_DNS_=1.1.1.1;8.8.8.8
+      - DNSMASQ_LISTENING=all
+    volumes:
+      - /mnt/swarm-shared/network/pihole/node1/etc-pihole:/etc/pihole
+      - /mnt/swarm-shared/network/pihole/node1/etc-dnsmasq.d:/etc/dnsmasq.d
+    ports:
+      - target: 53
+        published: 53
+        protocol: tcp
+        mode: host
+      - target: 53
+        published: 53
+        protocol: udp
+        mode: host
+    networks:
+      - traefik_proxy
+      - pihole_internal
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == app-worker-1
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.pihole.rule=Host(`dns.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.pihole.entrypoints=websecure"
+        - "traefik.http.routers.pihole.middlewares=authelia@docker"
+        - "traefik.http.services.pihole.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD-SHELL", "dig +short +norecurse +retry=0 @127.0.0.1 pi.hole || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  pihole-2:
+    image: pihole/pihole:latest
+    environment:
+      - TZ=Etc/UTC
+      - WEBPASSWORD=${PIHOLE_PASSWORD}
+      - PIHOLE_DNS_=1.1.1.1;8.8.8.8
+      - DNSMASQ_LISTENING=all
+    volumes:
+      - /mnt/swarm-shared/network/pihole/node2/etc-pihole:/etc/pihole
+      - /mnt/swarm-shared/network/pihole/node2/etc-dnsmasq.d:/etc/dnsmasq.d
+    ports:
+      - target: 53
+        published: 53
+        protocol: tcp
+        mode: host
+      - target: 53
+        published: 53
+        protocol: udp
+        mode: host
+    networks:
+      - traefik_proxy
+      - pihole_internal
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      replicas: 1
+      placement:
+        constraints:
+          - node.hostname == app-worker-2
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.pihole-2.rule=Host(`dns2.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.pihole-2.entrypoints=websecure"
+        - "traefik.http.routers.pihole-2.middlewares=authelia@docker"
+        - "traefik.http.services.pihole-2.loadbalancer.server.port=80"
+    healthcheck:
+      test: ["CMD-SHELL", "dig +short +norecurse +retry=0 @127.0.0.1 pi.hole || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ──────────────────────────────────────────────
+  # Orbital Sync — Keeps Pi-hole blocklists in sync via REST API
+  # ──────────────────────────────────────────────
+  orbital-sync:
+    image: ghcr.io/mattwebbio/orbital-sync:latest
+    environment:
+      - PRIMARY_HOST_BASE_URL=http://pihole-1
+      - PRIMARY_HOST_PASSWORD=${PIHOLE_PASSWORD}
+      - SECONDARY_HOST_1_BASE_URL=http://pihole-2
+      - SECONDARY_HOST_1_PASSWORD=${PIHOLE_PASSWORD}
+      - INTERVAL_MINUTES=30
+    networks:
+      - pihole_internal
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      placement:
+        constraints:
+          - node.role == worker
+      restart_policy:
+        condition: on-failure
+
+networks:
+  traefik_proxy:
+    external: true
+  vaultwarden_internal:
+    driver: overlay
+    attachable: false
+  pihole_internal:
+    driver: overlay
+    attachable: false
+
+volumes:
+  vaultwarden_db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/swarm-shared/network/vaultwarden-db

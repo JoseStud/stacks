@@ -12,6 +12,10 @@ services:
     networks:
       - traefik_proxy
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
       placement:
         constraints:
           - node.role == worker # Don't run on Bastion to prevent OOM
@@ -21,6 +25,7 @@ services:
         - "traefik.enable=true"
         - "traefik.http.routers.prometheus.rule=Host(`prometheus.example.com`)"
 
+
   loki:
     image: grafana/loki:latest
     volumes:
@@ -29,11 +34,16 @@ services:
     networks:
       - traefik_proxy
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
       placement:
         constraints:
           - node.role == worker # Don't run on Bastion to prevent OOM
       restart_policy:
         condition: on-failure
+
 
   promtail:
     image: grafana/promtail:latest
@@ -45,9 +55,14 @@ services:
     networks:
       - traefik_proxy
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
       mode: global
       restart_policy:
         condition: on-failure
+
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -63,9 +78,14 @@ services:
     networks:
       - traefik_proxy
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
       mode: global
       restart_policy:
         condition: on-failure
+
 
   grafana:
     image: grafana/grafana:latest
@@ -76,6 +96,10 @@ services:
     networks:
       - traefik_proxy
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
       placement:
         constraints:
           - node.role == worker
@@ -85,6 +109,7 @@ services:
         - "traefik.enable=true"
         - "traefik.http.routers.grafana.rule=Host(`grafana.example.com`)"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
 
 networks:
   traefik_proxy:

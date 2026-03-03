@@ -9,6 +9,10 @@ services:
     networks:
       - traefik_proxy
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
       placement:
         constraints:
           - node.role == worker
@@ -17,6 +21,7 @@ services:
         - "traefik.http.routers.openwebui.rule=Host(`ai.example.com`)"
         - "traefik.http.routers.openwebui.entrypoints=websecure"
         - "traefik.http.services.openwebui.loadbalancer.server.port=8080"
+        - "traefik.http.services.openwebui.loadbalancer.server.port=8080"
   openclaw-gateway:
     image: openclaw/gateway:latest
     volumes:
@@ -24,6 +29,10 @@ services:
     networks:
       - traefik_proxy
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
       placement:
         constraints:
           - node.role == worker
@@ -32,14 +41,20 @@ services:
         - "traefik.http.routers.openclaw.rule=Host(`gateway.example.com`)"
         - "traefik.http.routers.openclaw.entrypoints=websecure"
         - "traefik.http.services.openclaw.loadbalancer.server.port=8000"
+        - "traefik.http.services.openclaw.loadbalancer.server.port=8000"
   openclaw-cli:
     image: openclaw/cli:latest
     volumes:
       - ./openclaw/config:/root/.openclaw
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
       placement:
         constraints:
           - node.role == worker
+
 
 networks:
   traefik_proxy:

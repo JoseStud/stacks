@@ -12,8 +12,13 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
       placement:
         constraints:
+          - node.role == manager
           - node.role == manager
     networks:
       - socket-proxy
@@ -22,12 +27,17 @@ services:
   traefik:
     image: traefik:v3.0
     deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
       mode: global
       placement:
         constraints:
           - node.role == manager
       restart_policy:
         condition: on-failure
+
     security_opt:
       - no-new-privileges:true
     ports:

@@ -1,0 +1,95 @@
+version: '3.8'
+
+services:
+  homarr:
+    image: ghcr.io/homarr-org/homarr:latest
+    environment:
+      - SECRET_ENCRYPTION_KEY=${HOMARR_SECRET_KEY}
+      - AUTH_PROVIDER=credentials
+      - BASE_URL=https://home.${BASE_DOMAIN}
+    volumes:
+      - /mnt/swarm-shared/management/homarr/appdata:/appdata
+    networks:
+      - traefik_proxy
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      placement:
+        constraints:
+          - node.role == worker
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.homarr.rule=Host(`home.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.homarr.entrypoints=websecure"
+        - "traefik.http.routers.homarr.middlewares=authelia@docker"
+        - "traefik.http.services.homarr.loadbalancer.server.port=7575"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7575/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  portainer-server:
+    image: portainer/portainer-ce:lts
+    command: -H tcp://tasks.portainer-agent:9001 --tlsskipverify
+    volumes:
+      - portainer_data:/data
+    networks:
+      - traefik_proxy
+      - portainer_agent
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: stop-first
+      placement:
+        constraints:
+          - node.role == manager
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.portainer.rule=Host(`portainer.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.portainer.entrypoints=websecure"
+        - "traefik.http.routers.portainer.middlewares=authelia@docker"
+        - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  portainer-agent:
+    image: portainer/agent:lts
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/volumes:/var/lib/docker/volumes
+    networks:
+      - portainer_agent
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      mode: global
+      restart_policy:
+        condition: on-failure
+
+networks:
+  traefik_proxy:
+    external: true
+  portainer_agent:
+    driver: overlay
+    attachable: false
+
+volumes:
+  portainer_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/swarm-shared/management/portainer/data
