@@ -1,0 +1,48 @@
+version: 1
+
+stacks:
+  management:
+    compose_path: management/docker-compose.yml
+    portainer_managed: false
+    depends_on: []
+
+  gateway:
+    compose_path: gateway/docker-compose.yml
+    portainer_managed: true
+    depends_on: []
+    healthcheck_url: https://gateway-health.${BASE_DOMAIN}/healthz
+    healthcheck_expected_status: 200
+    healthcheck_timeout_seconds: 300
+
+  auth:
+    compose_path: auth/docker-compose.yml
+    portainer_managed: true
+    depends_on: [gateway]
+    healthcheck_url: https://auth.${BASE_DOMAIN}/api/health
+    healthcheck_expected_status: 200
+    healthcheck_timeout_seconds: 300
+
+  network:
+    compose_path: network/docker-compose.yml
+    portainer_managed: true
+    depends_on: [gateway, auth]
+
+  observability:
+    compose_path: observability/docker-compose.yml
+    portainer_managed: true
+    depends_on: [gateway, auth]
+
+  ai-interface:
+    compose_path: media/ai-interface/docker-compose.yml
+    portainer_managed: true
+    depends_on: [gateway, auth]
+
+  uptime:
+    compose_path: uptime/docker-compose.yml
+    portainer_managed: true
+    depends_on: [gateway, auth]
+
+  cloud:
+    compose_path: cloud/docker-compose.yml
+    portainer_managed: true
+    depends_on: [gateway, auth]

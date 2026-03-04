@@ -50,6 +50,12 @@ services:
           memory: 256M
       restart_policy:
         condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.gateway-health.rule=Host(`gateway-health.${BASE_DOMAIN}`) && Path(`/healthz`)"
+        - "traefik.http.routers.gateway-health.entrypoints=websecure"
+        - "traefik.http.routers.gateway-health.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.gateway-health.service=ping@internal"
     ports:
       - target: 80
         published: 80

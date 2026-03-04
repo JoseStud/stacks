@@ -69,6 +69,22 @@ services:
         - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
         - "traefik.http.routers.portainer.middlewares=authelia@docker"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"
+        # Automation-only API entrypoint (Terraform Cloud Agent + private webhook caller)
+        - "traefik.http.routers.portainer-api.rule=Host(`portainer-api.${BASE_DOMAIN}`) && PathPrefix(`/api`)"
+        - "traefik.http.routers.portainer-api.entrypoints=websecure"
+        - "traefik.http.routers.portainer-api.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.portainer-api.middlewares=portainer-api-allow,portainer-api-ratelimit,portainer-api-secure-headers"
+        - "traefik.http.routers.portainer-api.service=portainer"
+        - "traefik.http.middlewares.portainer-api-allow.ipallowlist.sourcerange=${PORTAINER_AUTOMATION_ALLOWED_CIDRS}"
+        - "traefik.http.middlewares.portainer-api-ratelimit.ratelimit.average=30"
+        - "traefik.http.middlewares.portainer-api-ratelimit.ratelimit.burst=60"
+        - "traefik.http.middlewares.portainer-api-secure-headers.headers.forceSTSHeader=true"
+        - "traefik.http.middlewares.portainer-api-secure-headers.headers.stsSeconds=31536000"
+        - "traefik.http.middlewares.portainer-api-secure-headers.headers.stsIncludeSubdomains=true"
+        - "traefik.http.middlewares.portainer-api-secure-headers.headers.stsPreload=true"
+        - "traefik.http.middlewares.portainer-api-secure-headers.headers.contentTypeNosniff=true"
+        - "traefik.http.middlewares.portainer-api-secure-headers.headers.browserXssFilter=true"
+        - "traefik.http.middlewares.portainer-api-secure-headers.headers.frameDeny=true"
     logging:
       driver: json-file
       options:
