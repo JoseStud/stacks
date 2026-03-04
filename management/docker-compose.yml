@@ -5,6 +5,7 @@ services:
       - SECRET_ENCRYPTION_KEY=${HOMARR_SECRET_KEY}
       - AUTH_PROVIDER=credentials
       - BASE_URL=https://home.${BASE_DOMAIN}
+      - TZ=${TZ}
     volumes:
       - /mnt/swarm-shared/management/homarr/appdata:/appdata
     networks:

@@ -1,6 +1,8 @@
 services:
   filebrowser:
     image: filebrowser/filebrowser:v2-s6
+    environment:
+      - TZ=${TZ}
     volumes:
       - /mnt/swarm-shared:/srv:ro
       - filebrowser_db:/database
