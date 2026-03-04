@@ -1,0 +1,37 @@
+# Prometheus Configuration
+# Deployed to: /mnt/swarm-shared/observability/prometheus/prometheus.yml
+# Docs: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Node Exporter — host metrics (deployed globally via Swarm)
+  # Uses Swarm DNS to resolve all task replicas
+  - job_name: 'node-exporter'
+    dns_sd_configs:
+      - names: ['tasks.node-exporter']
+        type: 'A'
+        port: 9100
+
+  # Traefik — reverse proxy metrics
+  # Exposed on dedicated metrics entrypoint (gateway stack)
+  - job_name: 'traefik'
+    dns_sd_configs:
+      - names: ['tasks.traefik']
+        type: 'A'
+        port: 8082
+    metrics_path: '/metrics'
+
+  # Loki — log aggregation system metrics
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+    metrics_path: '/metrics'
