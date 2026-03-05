@@ -1,0 +1,30 @@
+# Alertmanager Configuration
+# Deployed to: /mnt/swarm-shared/observability/alertmanager/alertmanager.yml
+# Docs: https://prometheus.io/docs/alerting/latest/configuration/
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'webhook'
+  group_by: ['alertname', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - receiver: 'webhook'
+      matchers:
+        - severity=~"critical|warning"
+
+receivers:
+  - name: 'webhook'
+    webhook_configs:
+      - url: '${ALERTMANAGER_WEBHOOK_URL}'
+        send_resolved: true
+
+inhibit_rules:
+  - source_matchers:
+      - severity = critical
+    target_matchers:
+      - severity = warning
+    equal: ['alertname', 'instance']

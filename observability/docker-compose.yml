@@ -1,8 +1,9 @@
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.2.1
     volumes:
       - /mnt/swarm-shared/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - /mnt/swarm-shared/observability/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -42,7 +43,7 @@ services:
       retries: 3
 
   loki:
-    image: grafana/loki:latest
+    image: grafana/loki:3.4.2
     volumes:
       - /mnt/swarm-shared/observability/loki:/etc/loki:ro
       - loki_data:/tmp/loki
@@ -73,7 +74,7 @@ services:
       retries: 3
 
   promtail:
-    image: grafana/promtail:latest
+    image: grafana/promtail:3.4.2
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -104,7 +105,7 @@ services:
       retries: 3
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.9.0
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -139,7 +140,7 @@ services:
       retries: 3
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:11.5.2
     environment:
       - GF_SERVER_ROOT_URL=https://grafana.${BASE_DOMAIN}
       - GF_AUTH_GENERIC_OAUTH_ENABLED=true
@@ -188,6 +189,47 @@ services:
       timeout: 10s
       retries: 3
 
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    volumes:
+      - /mnt/swarm-shared/observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - traefik_proxy
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      placement:
+        constraints:
+          - node.labels.location == cloud
+      resources:
+        limits:
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.alertmanager.entrypoints=websecure"
+        - "traefik.http.routers.alertmanager.tls.certresolver=letsencrypt"
+        - "traefik.http.routers.alertmanager.middlewares=authelia@docker"
+        - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
 networks:
   traefik_proxy:
     external: true
@@ -211,3 +253,9 @@ volumes:
       type: none
       o: bind
       device: /mnt/swarm-shared/observability/grafana_data
+  alertmanager_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/swarm-shared/observability/alertmanager_data

@@ -1,6 +1,6 @@
 services:
   authelia:
-    image: authelia/authelia
+    image: authelia/authelia:4.38.19
     environment:
       - AUTHELIA_JWT_SECRET=${AUTHELIA_JWT_SECRET}
       - AUTHELIA_SESSION_SECRET=${AUTHELIA_SESSION_SECRET}

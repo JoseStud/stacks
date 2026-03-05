@@ -1,6 +1,6 @@
 services:
   socket-proxy:
-    image: tecnativa/docker-socket-proxy
+    image: tecnativa/docker-socket-proxy:2.7.0
     environment:
       - CONTAINERS=1
       - NETWORKS=1
@@ -41,10 +41,10 @@ services:
         parallelism: 1
         delay: 10s
         order: start-first
-      mode: global
+      replicas: 2
       placement:
         constraints:
-          - node.role == manager
+          - node.labels.location == cloud
       resources:
         limits:
           memory: 256M
@@ -107,3 +107,7 @@ networks:
 volumes:
   traefik_acme:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/swarm-shared/gateway/traefik_acme

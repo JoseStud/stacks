@@ -6,8 +6,10 @@ infisical:
   auth:
     type: "universal-auth"
     config:
-      client-id: ""
-      client-secret: ""
+      # NOTE: Template placeholders — actual values are injected by Ansible
+      # during provisioning. See docs/infisical-workflow.md for setup instructions.
+      client-id: "<INJECTED_BY_ANSIBLE>"
+      client-secret: "<INJECTED_BY_ANSIBLE>"
 
   cache:
     backend: "local"
