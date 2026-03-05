@@ -10,6 +10,11 @@ if ! command -v yq >/dev/null 2>&1; then
   exit 1
 fi
 
+if ! command -v jq >/dev/null 2>&1; then
+  echo "jq is required but was not found in PATH."
+  exit 1
+fi
+
 to_bool() {
   local value="${1:-}"
   case "${value,,}" in
@@ -18,26 +23,14 @@ to_bool() {
   esac
 }
 
-normalize_csv() {
-  local input="${1:-}"
-  input="$(echo "${input}" | tr -d '\r')"
-  if [[ -z "${input}" || "${input}" == "null" ]]; then
-    echo ""
+assoc_keys_to_json() {
+  local -n assoc_ref="$1"
+  if [[ ${#assoc_ref[@]} -eq 0 ]]; then
+    echo "[]"
     return
   fi
 
-  IFS=',' read -ra parts <<< "${input}"
-  if [[ ${#parts[@]} -eq 0 ]]; then
-    echo ""
-    return
-  fi
-
-  printf '%s\n' "${parts[@]}" \
-    | awk '{$1=$1; print}' \
-    | awk 'NF > 0' \
-    | awk '!seen[$0]++' \
-    | sort \
-    | paste -sd, -
+  printf '%s\n' "${!assoc_ref[@]}" | sort | jq -R . | jq -s -c .
 }
 
 if [[ ! -f stacks.yaml ]]; then
@@ -65,9 +58,9 @@ done
 
 STRUCTURAL_CHANGE="false"
 REASON=""
-changed_stacks_csv=""
-config_stacks_csv=""
-changed_paths_csv=""
+changed_stacks_json="[]"
+config_stacks_json="[]"
+changed_paths_json="[]"
 
 if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
   for stack in "${PORTAINER_STACKS[@]}"; do
@@ -79,7 +72,7 @@ if [[ "${EVENT_NAME}" == "workflow_dispatch" ]]; then
     CHANGED_PATHS["stacks.yaml"]=1
     REASON="manual-refresh"
   else
-    REASON="manual-dispatch"
+    REASON="content-change"
   fi
 else
   BEFORE_SHA="${PUSH_BEFORE_SHA:-}"
@@ -147,25 +140,17 @@ else
   fi
 fi
 
-if [[ ${#CHANGED_STACKS[@]} -gt 0 ]]; then
-  changed_stacks_csv="$(printf '%s\n' "${!CHANGED_STACKS[@]}" | sort | paste -sd, -)"
-fi
 if [[ ${#CONFIG_STACKS[@]} -gt 0 ]]; then
-  config_stacks_csv="$(printf '%s\n' "${!CONFIG_STACKS[@]}" | sort | paste -sd, -)"
-fi
-if [[ ${#CHANGED_PATHS[@]} -gt 0 ]]; then
-  changed_paths_csv="$(printf '%s\n' "${!CHANGED_PATHS[@]}" | sort | paste -sd, -)"
-fi
-
-changed_stacks_csv="$(normalize_csv "${changed_stacks_csv}")"
-config_stacks_csv="$(normalize_csv "${config_stacks_csv}")"
-changed_paths_csv="$(normalize_csv "${changed_paths_csv}")"
-
-if [[ -n "${config_stacks_csv}" ]]; then
-  changed_stacks_csv="$(normalize_csv "${changed_stacks_csv},${config_stacks_csv}")"
+  for stack in "${!CONFIG_STACKS[@]}"; do
+    CHANGED_STACKS["${stack}"]=1
+  done
 fi
 
-if [[ -z "${REASON}" && -n "${changed_stacks_csv}" ]]; then
+changed_stacks_json="$(assoc_keys_to_json CHANGED_STACKS)"
+config_stacks_json="$(assoc_keys_to_json CONFIG_STACKS)"
+changed_paths_json="$(assoc_keys_to_json CHANGED_PATHS)"
+
+if [[ -z "${REASON}" && "${changed_stacks_json}" != "[]" ]]; then
   REASON="content-change"
 fi
 if [[ -z "${REASON}" ]]; then
@@ -173,24 +158,24 @@ if [[ -z "${REASON}" ]]; then
 fi
 
 SHOULD_DISPATCH="false"
-if [[ -n "${changed_stacks_csv}" || "${STRUCTURAL_CHANGE}" == "true" ]]; then
+if [[ "${changed_stacks_json}" != "[]" || "${STRUCTURAL_CHANGE}" == "true" ]]; then
   SHOULD_DISPATCH="true"
 fi
 
 {
-  echo "schema_version=v2"
-  echo "changed_stacks=${changed_stacks_csv}"
-  echo "config_stacks=${config_stacks_csv}"
+  echo "schema_version=v3"
+  echo "changed_stacks_json=${changed_stacks_json}"
+  echo "config_stacks_json=${config_stacks_json}"
   echo "structural_change=${STRUCTURAL_CHANGE}"
   echo "reason=${REASON}"
-  echo "changed_paths=${changed_paths_csv}"
+  echo "changed_paths_json=${changed_paths_json}"
   echo "should_dispatch=${SHOULD_DISPATCH}"
 } >> "${GITHUB_OUTPUT}"
 
-echo "Schema version: v2"
-echo "Changed stacks: ${changed_stacks_csv:-<none>}"
-echo "Config stacks: ${config_stacks_csv:-<none>}"
+echo "Schema version: v3"
+echo "Changed stacks JSON: ${changed_stacks_json}"
+echo "Config stacks JSON: ${config_stacks_json}"
 echo "Structural change: ${STRUCTURAL_CHANGE}"
 echo "Reason: ${REASON}"
-echo "Changed paths: ${changed_paths_csv:-<none>}"
+echo "Changed paths JSON: ${changed_paths_json}"
 echo "Should dispatch: ${SHOULD_DISPATCH}"
