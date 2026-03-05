@@ -1,0 +1,119 @@
+name: Stacks Dispatch Redeploy
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "stacks.yaml"
+      - "**/docker-compose.yml"
+      - "auth/config/**"
+      - "observability/config/**"
+      - ".github/scripts/plan_redeploy_payload.sh"
+      - ".github/workflows/stacks-dispatch-redeploy.yml"
+  workflow_dispatch:
+    inputs:
+      force_portainer_tf_refresh:
+        description: "Dispatch structural refresh even without compose add/remove/rename"
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stacks-dispatch-redeploy-${{ github.ref_name || github.event.repository.default_branch || 'main' }}
+  cancel-in-progress: true
+
+jobs:
+  runner-guard:
+    runs-on: ubuntu-latest
+    outputs:
+      runner_label: ${{ steps.verify.outputs.runner_label }}
+
+    steps:
+      - name: Verify cloud runner label is configured
+        id: verify
+        env:
+          CLOUD_STATIC_RUNNER_LABEL: ${{ vars.CLOUD_STATIC_RUNNER_LABEL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLOUD_STATIC_RUNNER_LABEL:-}" ]]; then
+            echo "Missing required variable: CLOUD_STATIC_RUNNER_LABEL"
+            exit 1
+          fi
+          echo "runner_label=${CLOUD_STATIC_RUNNER_LABEL}" >> "${GITHUB_OUTPUT}"
+
+  dispatch-meta-request:
+    needs: [runner-guard]
+    runs-on: ${{ needs.runner-guard.outputs.runner_label }}
+
+    steps:
+      - name: Checkout stacks repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup yq
+        run: |
+          sudo wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Build redeploy request payload
+        id: plan
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+          PUSH_SHA: ${{ github.sha }}
+          INPUT_FORCE_PORTAINER_TF_REFRESH: ${{ inputs.force_portainer_tf_refresh }}
+        run: .github/scripts/plan_redeploy_payload.sh
+
+      - name: Dispatch stacks-redeploy-requested to infra repo
+        if: ${{ steps.plan.outputs.should_dispatch == 'true' }}
+        env:
+          INFRA_REPO: ${{ vars.INFRA_REPO || 'JoseStud/GoodOldMeServer' }}
+          DISPATCH_TOKEN: ${{ secrets.INFRA_REPO_DISPATCH_TOKEN }}
+          STACKS_SHA: ${{ github.sha }}
+          SCHEMA_VERSION: ${{ steps.plan.outputs.schema_version }}
+          CHANGED_STACKS: ${{ steps.plan.outputs.changed_stacks }}
+          CONFIG_STACKS: ${{ steps.plan.outputs.config_stacks }}
+          STRUCTURAL_CHANGE: ${{ steps.plan.outputs.structural_change }}
+          REASON: ${{ steps.plan.outputs.reason }}
+          CHANGED_PATHS: ${{ steps.plan.outputs.changed_paths }}
+          SOURCE_REPO: ${{ github.repository }}
+          SOURCE_RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DISPATCH_TOKEN:-}" ]]; then
+            echo "Missing secret INFRA_REPO_DISPATCH_TOKEN."
+            exit 1
+          fi
+
+          curl -sSfL -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
+            "https://api.github.com/repos/${INFRA_REPO}/dispatches" \
+            -d "$(cat <<EOF_JSON
+          {
+            "event_type": "stacks-redeploy-requested",
+            "client_payload": {
+              "schema_version": "${SCHEMA_VERSION}",
+              "stacks_sha": "${STACKS_SHA}",
+              "changed_stacks": "${CHANGED_STACKS}",
+              "config_stacks": "${CONFIG_STACKS}",
+              "structural_change": ${STRUCTURAL_CHANGE},
+              "reason": "${REASON}",
+              "changed_paths": "${CHANGED_PATHS}",
+              "source_repo": "${SOURCE_REPO}",
+              "source_run_id": ${SOURCE_RUN_ID}
+            }
+          }
+          EOF_JSON
+          )"
+
+      - name: No-op summary
+        if: ${{ steps.plan.outputs.should_dispatch != 'true' }}
+        run: echo "No relevant stack redeploy signal detected; dispatch skipped."

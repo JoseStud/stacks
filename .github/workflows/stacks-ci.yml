@@ -1,0 +1,67 @@
+name: Stacks CI
+
+on:
+  pull_request:
+    paths:
+      - "stacks.yaml"
+      - "**/docker-compose.yml"
+      - "auth/config/**"
+      - "observability/config/**"
+      - ".github/scripts/validate_stacks_manifest.sh"
+      - ".github/workflows/stacks-ci.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "stacks.yaml"
+      - "**/docker-compose.yml"
+      - "auth/config/**"
+      - "observability/config/**"
+      - ".github/scripts/validate_stacks_manifest.sh"
+      - ".github/workflows/stacks-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: stacks-ci-${{ github.ref_name || github.event.repository.default_branch || 'main' }}
+  cancel-in-progress: true
+
+jobs:
+  runner-guard:
+    runs-on: ubuntu-latest
+    outputs:
+      runner_label: ${{ steps.verify.outputs.runner_label }}
+
+    steps:
+      - name: Verify cloud runner label is configured
+        id: verify
+        env:
+          CLOUD_STATIC_RUNNER_LABEL: ${{ vars.CLOUD_STATIC_RUNNER_LABEL }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${CLOUD_STATIC_RUNNER_LABEL:-}" ]]; then
+            echo "Missing required variable: CLOUD_STATIC_RUNNER_LABEL"
+            exit 1
+          fi
+          echo "runner_label=${CLOUD_STATIC_RUNNER_LABEL}" >> "${GITHUB_OUTPUT}"
+
+  validate-stacks:
+    needs: [runner-guard]
+    runs-on: ${{ needs.runner-guard.outputs.runner_label }}
+
+    steps:
+      - name: Checkout stacks repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup yq
+        run: |
+          sudo wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo chmod +x /usr/local/bin/yq
+          yq --version
+
+      - name: Validate stack manifest and compose files
+        run: .github/scripts/validate_stacks_manifest.sh
