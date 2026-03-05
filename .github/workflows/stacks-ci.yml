@@ -58,8 +58,12 @@ jobs:
           fetch-depth: 0
 
       - name: Setup yq
+        env:
+          YQ_VERSION: "4.52.1"
+          YQ_SHA256: "32c4c83eb88dfab8b1f9f36748e10fd09381f952d54205b3be4f6f107fe246f0"
         run: |
-          sudo wget -q https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/local/bin/yq
+          sudo wget -q "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64" -O /usr/local/bin/yq
+          echo "${YQ_SHA256}  /usr/local/bin/yq" | sha256sum -c -
           sudo chmod +x /usr/local/bin/yq
           yq --version
 
