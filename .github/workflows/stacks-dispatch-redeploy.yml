@@ -1,26 +1,13 @@
 name: Stacks Dispatch Redeploy
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - "Stacks CI"
+    types:
+      - completed
     branches:
       - main
-    paths:
-      - "stacks.yaml"
-      - "**/docker-compose.yml"
-      - "**/.env.tmpl"
-      - "infisical-agent.yaml"
-      - "auth/config/**"
-      - "observability/config/**"
-      - ".github/scripts/plan_redeploy_payload.sh"
-      - ".github/scripts/validate_dispatch_payload_v4.sh"
-      - ".github/workflows/stacks-dispatch-redeploy.yml"
-  workflow_dispatch:
-    inputs:
-      force_portainer_tf_refresh:
-        description: "Dispatch structural refresh even without compose add/remove/rename"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -50,68 +37,53 @@ jobs:
 
   dispatch-meta-request:
     needs: [runner-guard]
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
     runs-on: ${{ needs.runner-guard.outputs.runner_label }}
 
     steps:
       - name: Checkout stacks repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
 
-      - name: Install jq + yq
+      - name: Install jq
         run: |
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y jq
           jq --version
-          YQ_VERSION="4.52.1"
-          YQ_SHA256="32c4c83eb88dfab8b1f9f36748e10fd09381f952d54205b3be4f6f107fe246f0"
-          sudo wget -q "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64" -O /usr/local/bin/yq
-          echo "${YQ_SHA256}  /usr/local/bin/yq" | sha256sum -c -
-          sudo chmod +x /usr/local/bin/yq
-          yq --version
 
       - name: Build redeploy request payload
         id: plan
         env:
           EVENT_NAME: ${{ github.event_name }}
-          PUSH_BEFORE_SHA: ${{ github.event.before }}
-          PUSH_SHA: ${{ github.sha }}
-          INPUT_FORCE_PORTAINER_TF_REFRESH: ${{ inputs.force_portainer_tf_refresh }}
+          WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_REPOSITORY: ${{ github.event.workflow_run.repository.full_name }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
         run: .github/scripts/plan_redeploy_payload.sh
 
       - name: Validate dispatch payload contract
         if: ${{ steps.plan.outputs.should_dispatch == 'true' }}
         env:
           PAYLOAD_SCHEMA_VERSION: ${{ steps.plan.outputs.schema_version }}
-          PAYLOAD_STACKS_SHA: ${{ github.sha }}
-          PAYLOAD_SOURCE_SHA: ${{ github.sha }}
-          PAYLOAD_CHANGED_STACKS_JSON: ${{ steps.plan.outputs.changed_stacks_json }}
-          PAYLOAD_HOST_SYNC_STACKS_JSON: ${{ steps.plan.outputs.host_sync_stacks_json }}
-          PAYLOAD_CONFIG_STACKS_JSON: ${{ steps.plan.outputs.config_stacks_json }}
-          PAYLOAD_STRUCTURAL_CHANGE: ${{ steps.plan.outputs.structural_change }}
+          PAYLOAD_STACKS_SHA: ${{ steps.plan.outputs.stacks_sha }}
+          PAYLOAD_SOURCE_SHA: ${{ steps.plan.outputs.source_sha }}
           PAYLOAD_REASON: ${{ steps.plan.outputs.reason }}
-          PAYLOAD_CHANGED_PATHS_JSON: ${{ steps.plan.outputs.changed_paths_json }}
-          PAYLOAD_SOURCE_REPO: ${{ github.repository }}
-          PAYLOAD_SOURCE_RUN_ID: ${{ github.run_id }}
-        run: .github/scripts/validate_dispatch_payload_v4.sh
+          PAYLOAD_SOURCE_REPO: ${{ steps.plan.outputs.source_repo }}
+          PAYLOAD_SOURCE_RUN_ID: ${{ steps.plan.outputs.source_run_id }}
+        run: .github/scripts/validate_dispatch_payload.sh
 
-      - name: Dispatch stacks-redeploy-intent-v4 to infra repo
+      - name: Dispatch stacks-redeploy-intent-v5 to infra repo
         if: ${{ steps.plan.outputs.should_dispatch == 'true' }}
         env:
           INFRA_REPO: ${{ vars.INFRA_REPO || 'JoseStud/GoodOldMeServer' }}
           DISPATCH_TOKEN: ${{ secrets.INFRA_REPO_DISPATCH_TOKEN }}
-          STACKS_SHA: ${{ github.sha }}
-          SOURCE_SHA: ${{ github.sha }}
           SCHEMA_VERSION: ${{ steps.plan.outputs.schema_version }}
-          CHANGED_STACKS_JSON: ${{ steps.plan.outputs.changed_stacks_json }}
-          HOST_SYNC_STACKS_JSON: ${{ steps.plan.outputs.host_sync_stacks_json }}
-          CONFIG_STACKS_JSON: ${{ steps.plan.outputs.config_stacks_json }}
-          STRUCTURAL_CHANGE: ${{ steps.plan.outputs.structural_change }}
+          STACKS_SHA: ${{ steps.plan.outputs.stacks_sha }}
+          SOURCE_SHA: ${{ steps.plan.outputs.source_sha }}
           REASON: ${{ steps.plan.outputs.reason }}
-          CHANGED_PATHS_JSON: ${{ steps.plan.outputs.changed_paths_json }}
-          SOURCE_REPO: ${{ github.repository }}
-          SOURCE_RUN_ID: ${{ github.run_id }}
+          SOURCE_REPO: ${{ steps.plan.outputs.source_repo }}
+          SOURCE_RUN_ID: ${{ steps.plan.outputs.source_run_id }}
         run: |
           set -euo pipefail
 
@@ -126,24 +98,15 @@ jobs:
             "https://api.github.com/repos/${INFRA_REPO}/dispatches" \
             -d "$(cat <<EOF_JSON
           {
-            "event_type": "stacks-redeploy-intent-v4",
+            "event_type": "stacks-redeploy-intent-v5",
             "client_payload": {
               "schema_version": "${SCHEMA_VERSION}",
               "stacks_sha": "${STACKS_SHA}",
               "source_sha": "${SOURCE_SHA}",
-              "changed_stacks": ${CHANGED_STACKS_JSON},
-              "host_sync_stacks": ${HOST_SYNC_STACKS_JSON},
-              "config_stacks": ${CONFIG_STACKS_JSON},
-              "structural_change": ${STRUCTURAL_CHANGE},
               "reason": "${REASON}",
-              "changed_paths": ${CHANGED_PATHS_JSON},
               "source_repo": "${SOURCE_REPO}",
               "source_run_id": ${SOURCE_RUN_ID}
             }
           }
           EOF_JSON
           )"
-
-      - name: No-op summary
-        if: ${{ steps.plan.outputs.should_dispatch != 'true' }}
-        run: echo "No relevant stack redeploy signal detected; dispatch skipped."
