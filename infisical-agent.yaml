@@ -1,20 +1,18 @@
-# /etc/infisical-agent/infisical-agent.yaml
-# Managed by Ansible
+# /etc/infisical/agent.yaml
+# Managed by Ansible from the stacks repository.
 
 infisical:
-  address: https://app.infisical.com
+  address: {{ runtime_sync_infisical_domain | to_json }}
   auth:
     type: "universal-auth"
     config:
-      # NOTE: Template placeholders — actual values are injected by Ansible
-      # during provisioning. See docs/infisical-workflow.md for setup instructions.
-      client-id: "<INJECTED_BY_ANSIBLE>"
-      client-secret: "<INJECTED_BY_ANSIBLE>"
+      client-id: {{ runtime_sync_infisical_agent_client_id | to_json }}
+      client-secret: {{ runtime_sync_infisical_agent_client_secret | to_json }}
 
   cache:
     backend: "local"
     path: "/var/lib/infisical/cache"
-    ttl: "168h" # Cache secrets for 1 week offline
+    ttl: "168h"
 
   templates:
     # Gateway — Traefik + socket-proxy (Cloudflare DNS challenge)
@@ -23,7 +21,12 @@ infisical:
       config:
         polling-interval: 60s
       exec:
-        command: "docker stack deploy -c /opt/stacks/gateway/docker-compose.yml gateway"
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          /usr/local/bin/portainer-stack-webhook gateway
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping gateway webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
         timeout: 60
 
     # Identity — Authelia SSO
@@ -32,7 +35,12 @@ infisical:
       config:
         polling-interval: 60s
       exec:
-        command: "docker stack deploy -c /opt/stacks/auth/docker-compose.yml auth"
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          /usr/local/bin/portainer-stack-webhook auth
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping auth webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
         timeout: 60
 
     # Management — Homarr + Portainer
@@ -41,7 +49,12 @@ infisical:
       config:
         polling-interval: 60s
       exec:
-        command: "docker stack deploy -c /opt/stacks/management/docker-compose.yml management"
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          docker stack deploy -c /opt/stacks/management/docker-compose.yml management
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping management deploy on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
         timeout: 60
 
     # Network — Vaultwarden + Pi-hole + Orbital Sync
@@ -50,7 +63,12 @@ infisical:
       config:
         polling-interval: 60s
       exec:
-        command: "docker stack deploy -c /opt/stacks/network/docker-compose.yml network"
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          /usr/local/bin/portainer-stack-webhook network
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping network webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
         timeout: 60
 
     # Observability — Prometheus + Loki + Grafana
@@ -59,7 +77,12 @@ infisical:
       config:
         polling-interval: 60s
       exec:
-        command: "docker stack deploy -c /opt/stacks/observability/docker-compose.yml observability"
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          /usr/local/bin/portainer-stack-webhook observability
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping observability webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
         timeout: 60
 
     # AI Interface — Open WebUI + OpenClaw
@@ -68,7 +91,12 @@ infisical:
       config:
         polling-interval: 60s
       exec:
-        command: "docker stack deploy -c /opt/stacks/media/ai-interface/docker-compose.yml ai-interface"
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          /usr/local/bin/portainer-stack-webhook ai-interface
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping ai-interface webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
         timeout: 60
 
     # Uptime — Uptime Kuma
@@ -77,7 +105,12 @@ infisical:
       config:
         polling-interval: 60s
       exec:
-        command: "docker stack deploy -c /opt/stacks/uptime/docker-compose.yml uptime"
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          /usr/local/bin/portainer-stack-webhook uptime
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping uptime webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
         timeout: 60
 
     # Cloud — FileBrowser
@@ -86,6 +119,10 @@ infisical:
       config:
         polling-interval: 60s
       exec:
-        command: "docker stack deploy -c /opt/stacks/cloud/docker-compose.yml cloud"
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          /usr/local/bin/portainer-stack-webhook cloud
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping cloud webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
         timeout: 60
-

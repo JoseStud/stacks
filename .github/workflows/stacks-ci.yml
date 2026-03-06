@@ -5,8 +5,13 @@ on:
     paths:
       - "stacks.yaml"
       - "**/docker-compose.yml"
+      - "**/.env.tmpl"
+      - "infisical-agent.yaml"
       - "auth/config/**"
       - "observability/config/**"
+      - ".github/scripts/plan_redeploy_payload.sh"
+      - ".github/scripts/test_redeploy_planner.sh"
+      - ".github/scripts/validate_dispatch_payload_v4.sh"
       - ".github/scripts/validate_stacks_manifest.sh"
       - ".github/workflows/stacks-ci.yml"
   push:
@@ -15,8 +20,13 @@ on:
     paths:
       - "stacks.yaml"
       - "**/docker-compose.yml"
+      - "**/.env.tmpl"
+      - "infisical-agent.yaml"
       - "auth/config/**"
       - "observability/config/**"
+      - ".github/scripts/plan_redeploy_payload.sh"
+      - ".github/scripts/test_redeploy_planner.sh"
+      - ".github/scripts/validate_dispatch_payload_v4.sh"
       - ".github/scripts/validate_stacks_manifest.sh"
       - ".github/workflows/stacks-ci.yml"
   workflow_dispatch:
@@ -57,15 +67,33 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup yq
-        env:
-          YQ_VERSION: "4.52.1"
-          YQ_SHA256: "32c4c83eb88dfab8b1f9f36748e10fd09381f952d54205b3be4f6f107fe246f0"
+      - name: Install jq + yq
         run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y jq
+          jq --version
+          YQ_VERSION="4.52.1"
+          YQ_SHA256="32c4c83eb88dfab8b1f9f36748e10fd09381f952d54205b3be4f6f107fe246f0"
           sudo wget -q "https://github.com/mikefarah/yq/releases/download/v${YQ_VERSION}/yq_linux_amd64" -O /usr/local/bin/yq
           echo "${YQ_SHA256}  /usr/local/bin/yq" | sha256sum -c -
           sudo chmod +x /usr/local/bin/yq
           yq --version
 
+      - name: Preflight docker compose availability
+        run: |
+          set -euo pipefail
+          command -v docker >/dev/null 2>&1 || {
+            echo "docker is required but was not found in PATH."
+            exit 1
+          }
+          docker compose version >/dev/null 2>&1 || {
+            echo "docker compose plugin is required but is unavailable."
+            exit 1
+          }
+
       - name: Validate stack manifest and compose files
         run: .github/scripts/validate_stacks_manifest.sh
+
+      - name: Run redeploy planner contract tests
+        run: .github/scripts/test_redeploy_planner.sh
