@@ -10,7 +10,7 @@ stacks:
     compose_path: gateway/docker-compose.yml
     portainer_managed: true
     depends_on: []
-    healthcheck_url: https://gateway-health.${BASE_DOMAIN}/healthz
+    healthcheck_url: https://gateway-health.{{ .Env.BASE_DOMAIN }}/healthz
     healthcheck_expected_status: 200
     healthcheck_timeout_seconds: 300
 
@@ -18,7 +18,7 @@ stacks:
     compose_path: auth/docker-compose.yml
     portainer_managed: true
     depends_on: [gateway]
-    healthcheck_url: https://auth.${BASE_DOMAIN}/api/health
+    healthcheck_url: https://auth.{{ .Env.BASE_DOMAIN }}/api/health
     healthcheck_expected_status: 200
     healthcheck_timeout_seconds: 300
 

@@ -47,6 +47,10 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Install jq
+        # NOTE: jq is installed inline because the stacks sub-repo cannot
+        # reference the parent's .github/actions/bootstrap-tools composite
+        # action.  Keep the installed version consistent with the parent
+        # repo's .github/ci/tool-versions.lock (JQ_VERSION).
         run: |
           set -euo pipefail
           sudo apt-get update
@@ -96,17 +100,22 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             -H "Authorization: Bearer ${DISPATCH_TOKEN}" \
             "https://api.github.com/repos/${INFRA_REPO}/dispatches" \
-            -d "$(cat <<EOF_JSON
-          {
-            "event_type": "stacks-redeploy-intent-v5",
-            "client_payload": {
-              "schema_version": "${SCHEMA_VERSION}",
-              "stacks_sha": "${STACKS_SHA}",
-              "source_sha": "${SOURCE_SHA}",
-              "reason": "${REASON}",
-              "source_repo": "${SOURCE_REPO}",
-              "source_run_id": ${SOURCE_RUN_ID}
-            }
-          }
-          EOF_JSON
-          )"
+            -d "$(jq -n \
+              --arg sv "${SCHEMA_VERSION}" \
+              --arg sha "${STACKS_SHA}" \
+              --arg src_sha "${SOURCE_SHA}" \
+              --arg reason "${REASON}" \
+              --arg repo "${SOURCE_REPO}" \
+              --arg run_id "${SOURCE_RUN_ID}" \
+              '{
+                event_type: "stacks-redeploy-intent-v5",
+                client_payload: {
+                  schema_version: $sv,
+                  stacks_sha: $sha,
+                  source_sha: $src_sha,
+                  reason: $reason,
+                  source_repo: $repo,
+                  source_run_id: ($run_id | tonumber)
+                }
+              }'
+            )"

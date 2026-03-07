@@ -70,6 +70,12 @@ jobs:
           fetch-depth: 0
 
       - name: Install jq + yq
+        # NOTE: The stacks sub-repo cannot reference the parent's
+        # .github/actions/bootstrap-tools composite action.  The yq version
+        # and SHA below MUST be kept in sync with the parent repo's
+        # .github/ci/tool-versions.lock (YQ_VERSION / YQ_SHA256).
+        # The SHA may differ because tool-versions.lock may pin a different
+        # artifact variant — verify both after any yq version bump.
         run: |
           set -euo pipefail
           sudo apt-get update
