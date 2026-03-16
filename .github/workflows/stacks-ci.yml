@@ -41,27 +41,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  runner-guard:
-    runs-on: ubuntu-latest
-    outputs:
-      runner_label: ${{ steps.verify.outputs.runner_label }}
-
-    steps:
-      - name: Verify cloud runner label is configured
-        id: verify
-        env:
-          CLOUD_STATIC_RUNNER_LABEL: ${{ vars.CLOUD_STATIC_RUNNER_LABEL }}
-        run: |
-          set -euo pipefail
-          if [[ -z "${CLOUD_STATIC_RUNNER_LABEL:-}" ]]; then
-            echo "Missing required variable: CLOUD_STATIC_RUNNER_LABEL"
-            exit 1
-          fi
-          echo "runner_label=${CLOUD_STATIC_RUNNER_LABEL}" >> "${GITHUB_OUTPUT}"
-
   validate-stacks:
-    needs: [runner-guard]
-    runs-on: ${{ needs.runner-guard.outputs.runner_label }}
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout stacks repository
