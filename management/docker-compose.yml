@@ -43,9 +43,12 @@ services:
 
   portainer-server:
     image: portainer/portainer-ce:lts
-    command: --tlsskipverify --admin-password "${PORTAINER_ADMIN_PASSWORD_HASH}"
+    command: -H tcp://tasks.portainer-agent:9001 --tlsskipverify --admin-password "${PORTAINER_ADMIN_PASSWORD_HASH}"
     ports:
-      - "127.0.0.1:9000:9000"
+      - target: 9000
+        published: 9000
+        protocol: tcp
+        mode: host
     volumes:
       - portainer_db:/data
     networks:
