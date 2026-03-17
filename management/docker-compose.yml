@@ -47,7 +47,7 @@ services:
     ports:
       - "127.0.0.1:9000:9000"
     volumes:
-      - portainer_data:/data
+      - portainer_db:/data
     networks:
       - traefik_proxy
       - portainer_agent
@@ -55,10 +55,11 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        order: start-first
+        order: stop-first
       placement:
         constraints:
-          - node.role == manager
+          - node.labels.location == cloud
+          - node.hostname == app-worker-1
       resources:
         limits:
           memory: 256M
@@ -130,9 +131,5 @@ networks:
     attachable: false
 
 volumes:
-  portainer_data:
+  portainer_db:
     driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: /mnt/swarm-shared/management/portainer/data
