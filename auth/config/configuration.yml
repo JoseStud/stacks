@@ -5,8 +5,11 @@
 # Secrets are injected via AUTHELIA_* environment variables from docker-compose.yml.
 # This file defines structure and non-secret settings only.
 # Variables overridden by env vars: JWT_SECRET, SESSION_SECRET, STORAGE_POSTGRES_*,
-#   NOTIFIER_SMTP_*, IDENTITY_PROVIDERS_OIDC_HMAC_SECRET,
-#   IDENTITY_PROVIDERS_OIDC_ISSUER_PRIVATE_KEY
+#   STORAGE_ENCRYPTION_KEY, NOTIFIER_SMTP_*,
+#   IDENTITY_PROVIDERS_OIDC_HMAC_SECRET
+#
+# Authelia's template filter is enabled at runtime for values nested inside lists,
+# which Authelia's native environment method doesn't support reliably.
 
 ###############################################################################
 # Server
@@ -63,9 +66,9 @@ session:
   expiration: '1h'
   remember_me: '1M'
   cookies:
-    - domain: 'example.com'  # Override: set AUTHELIA_SESSION_COOKIES_0_DOMAIN env var
-      authelia_url: 'https://auth.example.com'  # Override: AUTHELIA_SESSION_COOKIES_0_AUTHELIA_URL
-      default_redirection_url: 'https://home.example.com'  # Override: AUTHELIA_SESSION_COOKIES_0_DEFAULT_REDIRECTION_URL
+    - domain: {{ mustEnv "AUTH_SESSION_COOKIES_0_DOMAIN" | squote }}
+      authelia_url: {{ mustEnv "AUTH_SESSION_COOKIES_0_AUTHELIA_URL" | squote }}
+      default_redirection_url: {{ mustEnv "AUTH_SESSION_COOKIES_0_DEFAULT_REDIRECTION_URL" | squote }}
 
 ###############################################################################
 # Regulation — Brute-force protection
@@ -111,16 +114,18 @@ access_control:
   default_policy: 'two_factor'
   rules:
     # Authelia's own endpoints must be accessible without auth
-    - domain: 'auth.example.com'  # Override via access_control env or keep in sync with BASE_DOMAIN
+    - domain: {{ printf "auth.%s" (mustEnv "BASE_DOMAIN") | squote }}
       policy: 'bypass'
       resources:
         - '^/api/(verify|healthz|configuration)([/?].*)?$'
 
 ###############################################################################
 # Identity Providers — OpenID Connect (for Grafana SSO)
-# HMAC secret and issuer private key injected via env vars:
+# HMAC secret is injected via env var.
+# List-based OIDC values are rendered via Authelia's template filter:
 #   AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET
-#   AUTHELIA_IDENTITY_PROVIDERS_OIDC_JWKS_0_KEY
+#   AUTH_OIDC_JWKS_0_KEY
+#   AUTH_GRAFANA_OIDC_CLIENT_SECRET_HASH
 ###############################################################################
 identity_providers:
   oidc:
@@ -129,17 +134,15 @@ identity_providers:
       - key_id: 'main'
         algorithm: 'RS256'
         use: 'sig'
-        # key: injected via AUTHELIA_IDENTITY_PROVIDERS_OIDC_JWKS_0_KEY (RSA 4096 PEM)
+        key: {{ mustEnv "AUTH_OIDC_JWKS_0_KEY" | mindent 10 "|" | msquote }}
     clients:
       - client_id: 'grafana'
         client_name: 'Grafana'
-        # client_secret: argon2id hash of the plaintext secret stored in Infisical
-        # Generate hash: authelia crypto hash generate argon2 --password '<GF_OIDC_CLIENT_SECRET plaintext>'
-        client_secret: '$argon2id$v=19$m=65536,t=3,p=4$PLACEHOLDER_GENERATE_AND_REPLACE'
+        client_secret: {{ mustEnv "AUTH_GRAFANA_OIDC_CLIENT_SECRET_HASH" | squote }}
         public: false
         authorization_policy: 'two_factor'
         redirect_uris:
-          - 'https://grafana.example.com/login/generic_oauth'  # Update domain to match BASE_DOMAIN
+          - {{ printf "https://grafana.%s/login/generic_oauth" (mustEnv "BASE_DOMAIN") | squote }}
         scopes:
           - 'openid'
           - 'profile'

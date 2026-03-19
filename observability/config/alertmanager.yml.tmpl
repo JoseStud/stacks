@@ -1,6 +1,6 @@
-# Alertmanager Bootstrap Configuration
-# Seeded to: /mnt/swarm-shared/observability/alertmanager/alertmanager.yml
-# The Infisical Agent renders alertmanager.yml.tmpl and replaces this placeholder.
+# Alertmanager Configuration
+# Rendered by the Infisical Agent and then copied to:
+#   /mnt/swarm-shared/observability/alertmanager/alertmanager.yml
 # Docs: https://prometheus.io/docs/alerting/latest/configuration/
 
 global:
@@ -20,7 +20,15 @@ route:
 receivers:
   - name: 'webhook'
     webhook_configs:
+{{- with secret "/stacks/observability" }}
+{{- if .ALERTMANAGER_WEBHOOK_URL }}
+      - url: '{{ .ALERTMANAGER_WEBHOOK_URL }}'
+{{- else }}
       - url: 'http://127.0.0.1:65535/'
+{{- end }}
+{{- else }}
+      - url: 'http://127.0.0.1:65535/'
+{{- end }}
         send_resolved: true
 
 inhibit_rules:

@@ -1,0 +1,18 @@
+---
+# Authelia Users Database — File-based Authentication Backend
+# Docs: https://www.authelia.com/reference/guides/passwords/
+#
+# This file is rendered by the Infisical Agent from:
+#   /stacks/identity -> AUTHELIA_USERS_DATABASE_YAML
+# and then copied to /mnt/swarm-shared/auth/authelia/config/users_database.yml
+# by the Ansible-managed auth users sync helper on the primary manager.
+
+{{- with secret "/stacks/identity" }}
+{{- if .AUTHELIA_USERS_DATABASE_YAML }}
+{{ .AUTHELIA_USERS_DATABASE_YAML }}
+{{- else }}
+users: {}
+{{- end }}
+{{- else }}
+users: {}
+{{- end }}

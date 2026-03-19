@@ -5,9 +5,12 @@
 # Generate password hashes with:
 #   docker run --rm authelia/authelia:latest authelia crypto hash generate argon2 --password 'your-password'
 #
-# After generating a hash, replace the placeholder below and add your user(s).
-# This file is bind-mounted into the Authelia container at /config/users_database.yml
-# and is deployed to /mnt/swarm-shared/auth/authelia/config/ on GlusterFS.
+# This file is only a bootstrap placeholder.
+# The real runtime users database is rendered from:
+#   /stacks/identity -> AUTHELIA_USERS_DATABASE_YAML
+# via stacks/auth/config/users_database.yml.tmpl and then copied to:
+#   /mnt/swarm-shared/auth/authelia/config/users_database.yml
+# by the Ansible-managed Infisical Agent helper.
 
 users: {}
   # Example user — uncomment and update with real values:

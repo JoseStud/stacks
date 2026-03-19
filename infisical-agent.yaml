@@ -43,6 +43,20 @@ infisical:
           {%- endif %}
         timeout: 60
 
+    # Identity — Authelia users database
+    - source-path: "/opt/stacks/auth/config/users_database.yml.tmpl"
+      destination-path: "/opt/stacks/auth/config/users_database.rendered.yml"
+      config:
+        polling-interval: 60s
+      exec:
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          {{ runtime_sync_auth_users_sync_helper_path }} /opt/stacks/auth/config/users_database.rendered.yml
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping auth users sync on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
+        timeout: 60
+
     # Management — Homarr + Portainer
     - source-path: "/opt/stacks/management/.env.tmpl"
       destination-path: "/opt/stacks/management/.env"
@@ -82,6 +96,20 @@ infisical:
           /usr/local/bin/portainer-stack-webhook observability
           {%- else -%}
           /bin/sh -lc 'echo "Skipping observability webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
+          {%- endif %}
+        timeout: 60
+
+    # Observability — Alertmanager config
+    - source-path: "/opt/stacks/observability/config/alertmanager.yml.tmpl"
+      destination-path: "/opt/stacks/observability/config/alertmanager.rendered.yml"
+      config:
+        polling-interval: 60s
+      exec:
+        command: >-
+          {% if inventory_hostname == runtime_sync_primary_manager -%}
+          {{ runtime_sync_observability_alertmanager_sync_helper_path }} /opt/stacks/observability/config/alertmanager.rendered.yml
+          {%- else -%}
+          /bin/sh -lc 'echo "Skipping observability Alertmanager sync on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
           {%- endif %}
         timeout: 60
 

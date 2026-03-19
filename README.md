@@ -10,7 +10,7 @@ stacks/
 ├── infisical-agent.yaml         # Jinja2 template for Infisical Agent config (rendered by Ansible)
 ├── gateway/                     # Traefik v3 reverse proxy + docker-socket-proxy
 ├── auth/                        # Authelia SSO/2FA + PostgreSQL backend
-│   └── config/                  #   Authelia configuration + user database
+│   └── config/                  #   Authelia configuration + users database template/bootstrap file
 ├── management/                  # Homarr dashboard + Portainer server/agent
 ├── network/                     # Vaultwarden + Pi-hole HA + Orbital Sync
 ├── observability/               # Prometheus + Loki + Promtail + Grafana + Alertmanager
@@ -26,7 +26,7 @@ Each stack directory contains:
 - `docker-compose.yml` — Swarm service definition
 - `.env.tmpl` — Infisical Agent template that renders runtime `.env` files on each node
 
-Stacks with bind-mounted configs (`auth`, `observability`) include a `config/` subdirectory synced to GlusterFS by Ansible.
+Stacks with bind-mounted configs (`auth`, `observability`) include a `config/` subdirectory. Ansible syncs static config files to GlusterFS, and the Infisical Agent renders selected runtime-managed config templates where needed.
 
 ## Stack Overview
 
@@ -61,7 +61,7 @@ All stacks follow these patterns:
 Secrets are stored in [Infisical](https://infisical.com) and injected at runtime:
 
 1. Each stack has a `.env.tmpl` that references Infisical paths (e.g., `/infrastructure`, `/stacks/<name>`)
-2. The Infisical Agent (systemd service on each node) renders `.env.tmpl` -> `.env` every 60 seconds
+2. The Infisical Agent (systemd service on each node) renders `.env.tmpl` -> `.env` and selected config templates every 60 seconds
 3. On change, the agent triggers a Portainer webhook (or direct `docker stack deploy` for the management stack)
 
 Global variables (`BASE_DOMAIN`, `TZ`) come from `/infrastructure`. Stack-specific secrets live under `/stacks/<name>`.
@@ -99,7 +99,7 @@ This repo is consumed by GoodOldMeServer at multiple layers:
 
 | Layer | How Stacks Are Used |
 |-------|---------------------|
-| **Ansible** | Phase 4 (`sync-configs`): syncs `config/` dirs to GlusterFS. Phase 7 (`runtime_sync`): mirrors checkout to `/opt/stacks`, renders Infisical Agent config |
+| **Ansible** | Phase 4 (`sync-configs`): syncs static `config/` files to GlusterFS and seeds placeholders. Phase 7 (`runtime_sync`): mirrors checkout to `/opt/stacks`, renders Infisical Agent config, and installs runtime helpers |
 | **Terraform** | `portainer-root` pins Portainer GitOps stack definitions to this repo's `main` branch |
 | **Dagger CI** | Preflight phase verifies stacks SHA trust. Portainer phase applies stack updates and triggers health-gated redeploys |
 | **Dependabot** | Manages submodule update PRs (`gitsubmodule` ecosystem) |

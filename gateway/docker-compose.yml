@@ -66,10 +66,10 @@ services:
     volumes:
       - traefik_acme:/etc/traefik/acme
     command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.endpoint=${DOCKER_SOCKET_PROXY_URL:-tcp://socket-proxy:2375}"
-      - "--providers.docker.swarmMode=true"
+      - "--providers.swarm=true"
+      - "--providers.swarm.exposedbydefault=false"
+      - "--providers.swarm.endpoint=${DOCKER_SOCKET_PROXY_URL:-tcp://socket-proxy:2375}"
+      - "--providers.swarm.network=traefik_proxy"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
