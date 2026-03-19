@@ -19,6 +19,7 @@ services:
       placement:
         constraints:
           - node.labels.location == cloud
+          - node.hostname == app-worker-2
       resources:
         limits:
           memory: 1536M
@@ -178,6 +179,7 @@ services:
       placement:
         constraints:
           - node.labels.location == cloud
+          - node.hostname == app-worker-2
       resources:
         limits:
           memory: 512M
@@ -221,6 +223,7 @@ services:
       placement:
         constraints:
           - node.labels.location == cloud
+          - node.hostname == app-worker-2
       resources:
         limits:
           memory: 256M
@@ -268,7 +271,7 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /mnt/swarm-shared/observability/grafana_data
+      device: /mnt/app_data/local/observability/grafana_data
   alertmanager_data:
     driver: local
     driver_opts:

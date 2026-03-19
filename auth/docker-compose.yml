@@ -84,6 +84,7 @@ services:
       placement:
         constraints:
           - node.labels.location == cloud
+          - node.hostname == app-worker-1
       resources:
         limits:
           memory: 512M
@@ -115,4 +116,4 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /mnt/swarm-shared/auth/authelia-db
+      device: /mnt/app_data/local/auth/authelia-db

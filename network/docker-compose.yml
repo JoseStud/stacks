@@ -124,7 +124,7 @@ services:
           - node.hostname == app-worker-1
       resources:
         limits:
-          memory: 256M
+          memory: 512M
       restart_policy:
         condition: on-failure
       labels:
@@ -178,7 +178,7 @@ services:
           - node.hostname == app-worker-2
       resources:
         limits:
-          memory: 256M
+          memory: 512M
       restart_policy:
         condition: on-failure
       labels:
