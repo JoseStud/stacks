@@ -113,8 +113,9 @@ This repo is consumed by GoodOldMeServer at multiple layers:
 5. Register the stack in `infisical-agent.yaml`
 6. Add the stack entry to `stacks.yaml` with `compose_path`, `portainer_managed`, `depends_on`, and optional health check fields
 7. Run Ansible `phase7_runtime_sync` to converge `/opt/stacks` and the agent config
-8. Deploy: use `docker stack deploy` for non-Portainer stacks, or let Terraform + Portainer webhook automation handle Portainer-managed stacks
-9. Update documentation in the infrastructure repo (`docs/stacks.md`, `docs/deployment-runbook.md`)
+8. If the stack is Portainer-managed, add its env mapping in `terraform/portainer/main.tf` so Portainer receives the required compose variables from Infisical
+9. Deploy: use `docker stack deploy` for non-Portainer stacks, or let Terraform + Portainer webhook automation handle Portainer-managed stacks
+10. Update documentation in the infrastructure repo (`docs/stacks.md`, `docs/deployment-runbook.md`)
 
 ## Full Documentation
 

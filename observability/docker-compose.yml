@@ -47,6 +47,8 @@ services:
     volumes:
       - /mnt/swarm-shared/observability/loki:/etc/loki:ro
       - loki_data:/tmp/loki
+    command:
+      - '-config.file=/etc/loki/loki-config.yaml'
     networks:
       - traefik_proxy
     deploy:

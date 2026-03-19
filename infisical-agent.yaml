@@ -3,52 +3,37 @@
 
 infisical:
   address: {{ runtime_sync_infisical_domain | to_json }}
-  auth:
-    type: "universal-auth"
+
+auth:
+  type: "universal-auth"
+  config:
+    client-id: {{ runtime_sync_agent_client_id_path | to_json }}
+    client-secret: {{ runtime_sync_agent_client_secret_path | to_json }}
+    remove_client_secret_on_read: false
+
+templates:
+  # Gateway — Traefik + socket-proxy
+  # Host-rendered env file for break-glass direct deploys; the Portainer stack
+  # environment itself is managed via Terraform.
+  - source-path: "/opt/stacks/gateway/.env.tmpl"
+    destination-path: "/opt/stacks/gateway/.env"
     config:
-      client-id: {{ runtime_sync_infisical_agent_client_id | to_json }}
-      client-secret: {{ runtime_sync_infisical_agent_client_secret | to_json }}
+      polling-interval: 60s
 
-  cache:
-    backend: "local"
-    path: "/var/lib/infisical/cache"
-    ttl: "168h"
+  # Identity — Authelia SSO
+  # Host-rendered env file for break-glass direct deploys; the Portainer stack
+  # environment itself is managed via Terraform.
+  - source-path: "/opt/stacks/auth/.env.tmpl"
+    destination-path: "/opt/stacks/auth/.env"
+    config:
+      polling-interval: 60s
 
-  templates:
-    # Gateway — Traefik + socket-proxy (Cloudflare DNS challenge)
-    - source-path: "/opt/stacks/gateway/.env.tmpl"
-      destination-path: "/opt/stacks/gateway/.env"
-      config:
-        polling-interval: 60s
-      exec:
-        command: >-
-          {% if inventory_hostname == runtime_sync_primary_manager -%}
-          /usr/local/bin/portainer-stack-webhook gateway
-          {%- else -%}
-          /bin/sh -lc 'echo "Skipping gateway webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
-          {%- endif %}
-        timeout: 60
-
-    # Identity — Authelia SSO
-    - source-path: "/opt/stacks/auth/.env.tmpl"
-      destination-path: "/opt/stacks/auth/.env"
-      config:
-        polling-interval: 60s
-      exec:
-        command: >-
-          {% if inventory_hostname == runtime_sync_primary_manager -%}
-          /usr/local/bin/portainer-stack-webhook auth
-          {%- else -%}
-          /bin/sh -lc 'echo "Skipping auth webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
-          {%- endif %}
-        timeout: 60
-
-    # Identity — Authelia users database
-    - source-path: "/opt/stacks/auth/config/users_database.yml.tmpl"
-      destination-path: "/opt/stacks/auth/config/users_database.rendered.yml"
-      config:
-        polling-interval: 60s
-      exec:
+  # Identity — Authelia users database
+  - source-path: "/opt/stacks/auth/config/users_database.yml.tmpl"
+    destination-path: "/opt/stacks/auth/config/users_database.rendered.yml"
+    config:
+      polling-interval: 60s
+      execute:
         command: >-
           {% if inventory_hostname == runtime_sync_primary_manager -%}
           {{ runtime_sync_auth_users_sync_helper_path }} /opt/stacks/auth/config/users_database.rendered.yml
@@ -57,12 +42,12 @@ infisical:
           {%- endif %}
         timeout: 60
 
-    # Management — Homarr + Portainer
-    - source-path: "/opt/stacks/management/.env.tmpl"
-      destination-path: "/opt/stacks/management/.env"
-      config:
-        polling-interval: 60s
-      exec:
+  # Management — Homarr + Portainer
+  - source-path: "/opt/stacks/management/.env.tmpl"
+    destination-path: "/opt/stacks/management/.env"
+    config:
+      polling-interval: 60s
+      execute:
         command: >-
           {% if inventory_hostname == runtime_sync_primary_manager -%}
           docker stack deploy -c /opt/stacks/management/docker-compose.yml management
@@ -71,40 +56,28 @@ infisical:
           {%- endif %}
         timeout: 60
 
-    # Network — Vaultwarden + Pi-hole + Orbital Sync
-    - source-path: "/opt/stacks/network/.env.tmpl"
-      destination-path: "/opt/stacks/network/.env"
-      config:
-        polling-interval: 60s
-      exec:
-        command: >-
-          {% if inventory_hostname == runtime_sync_primary_manager -%}
-          /usr/local/bin/portainer-stack-webhook network
-          {%- else -%}
-          /bin/sh -lc 'echo "Skipping network webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
-          {%- endif %}
-        timeout: 60
+  # Network — Vaultwarden + Pi-hole + Orbital Sync
+  # Host-rendered env file for break-glass direct deploys; the Portainer stack
+  # environment itself is managed via Terraform.
+  - source-path: "/opt/stacks/network/.env.tmpl"
+    destination-path: "/opt/stacks/network/.env"
+    config:
+      polling-interval: 60s
 
-    # Observability — Prometheus + Loki + Grafana
-    - source-path: "/opt/stacks/observability/.env.tmpl"
-      destination-path: "/opt/stacks/observability/.env"
-      config:
-        polling-interval: 60s
-      exec:
-        command: >-
-          {% if inventory_hostname == runtime_sync_primary_manager -%}
-          /usr/local/bin/portainer-stack-webhook observability
-          {%- else -%}
-          /bin/sh -lc 'echo "Skipping observability webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
-          {%- endif %}
-        timeout: 60
+  # Observability — Prometheus + Loki + Grafana
+  # Host-rendered env file for break-glass direct deploys; the Portainer stack
+  # environment itself is managed via Terraform.
+  - source-path: "/opt/stacks/observability/.env.tmpl"
+    destination-path: "/opt/stacks/observability/.env"
+    config:
+      polling-interval: 60s
 
-    # Observability — Alertmanager config
-    - source-path: "/opt/stacks/observability/config/alertmanager.yml.tmpl"
-      destination-path: "/opt/stacks/observability/config/alertmanager.rendered.yml"
-      config:
-        polling-interval: 60s
-      exec:
+  # Observability — Alertmanager config
+  - source-path: "/opt/stacks/observability/config/alertmanager.yml.tmpl"
+    destination-path: "/opt/stacks/observability/config/alertmanager.rendered.yml"
+    config:
+      polling-interval: 60s
+      execute:
         command: >-
           {% if inventory_hostname == runtime_sync_primary_manager -%}
           {{ runtime_sync_observability_alertmanager_sync_helper_path }} /opt/stacks/observability/config/alertmanager.rendered.yml
@@ -113,44 +86,26 @@ infisical:
           {%- endif %}
         timeout: 60
 
-    # AI Interface — Open WebUI + OpenClaw
-    - source-path: "/opt/stacks/media/ai-interface/.env.tmpl"
-      destination-path: "/opt/stacks/media/ai-interface/.env"
-      config:
-        polling-interval: 60s
-      exec:
-        command: >-
-          {% if inventory_hostname == runtime_sync_primary_manager -%}
-          /usr/local/bin/portainer-stack-webhook ai-interface
-          {%- else -%}
-          /bin/sh -lc 'echo "Skipping ai-interface webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
-          {%- endif %}
-        timeout: 60
+  # AI Interface — Open WebUI + OpenClaw
+  # Host-rendered env file for break-glass direct deploys; the Portainer stack
+  # environment itself is managed via Terraform.
+  - source-path: "/opt/stacks/media/ai-interface/.env.tmpl"
+    destination-path: "/opt/stacks/media/ai-interface/.env"
+    config:
+      polling-interval: 60s
 
-    # Uptime — Uptime Kuma
-    - source-path: "/opt/stacks/uptime/.env.tmpl"
-      destination-path: "/opt/stacks/uptime/.env"
-      config:
-        polling-interval: 60s
-      exec:
-        command: >-
-          {% if inventory_hostname == runtime_sync_primary_manager -%}
-          /usr/local/bin/portainer-stack-webhook uptime
-          {%- else -%}
-          /bin/sh -lc 'echo "Skipping uptime webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
-          {%- endif %}
-        timeout: 60
+  # Uptime — Uptime Kuma
+  # Host-rendered env file for break-glass direct deploys; the Portainer stack
+  # environment itself is managed via Terraform.
+  - source-path: "/opt/stacks/uptime/.env.tmpl"
+    destination-path: "/opt/stacks/uptime/.env"
+    config:
+      polling-interval: 60s
 
-    # Cloud — FileBrowser
-    - source-path: "/opt/stacks/cloud/.env.tmpl"
-      destination-path: "/opt/stacks/cloud/.env"
-      config:
-        polling-interval: 60s
-      exec:
-        command: >-
-          {% if inventory_hostname == runtime_sync_primary_manager -%}
-          /usr/local/bin/portainer-stack-webhook cloud
-          {%- else -%}
-          /bin/sh -lc 'echo "Skipping cloud webhook on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
-          {%- endif %}
-        timeout: 60
+  # Cloud — FileBrowser
+  # Host-rendered env file for break-glass direct deploys; the Portainer stack
+  # environment itself is managed via Terraform.
+  - source-path: "/opt/stacks/cloud/.env.tmpl"
+    destination-path: "/opt/stacks/cloud/.env"
+    config:
+      polling-interval: 60s
