@@ -21,7 +21,9 @@ services:
           - node.labels.location == cloud
       resources:
         limits:
-          memory: 1G
+          memory: 1536M
+        reservations:
+          memory: 512M
       restart_policy:
         condition: on-failure
       labels:
@@ -46,6 +48,7 @@ services:
     image: grafana/loki:3.4.2
     volumes:
       - /mnt/swarm-shared/observability/loki:/etc/loki:ro
+      # Keep Loki WAL/TSDB on the node-local block volume; GlusterFS adds fsync latency.
       - loki_data:/tmp/loki
     command:
       - '-config.file=/etc/loki/loki-config.yaml'
@@ -59,9 +62,12 @@ services:
       placement:
         constraints:
           - node.labels.location == cloud
+          - node.hostname == app-worker-1
       resources:
         limits:
-          memory: 1G
+          memory: 2G
+        reservations:
+          memory: 512M
       restart_policy:
         condition: on-failure
     logging:
@@ -93,6 +99,8 @@ services:
       resources:
         limits:
           memory: 128M
+        reservations:
+          memory: 64M
       restart_policy:
         condition: on-failure
     logging:
@@ -128,6 +136,8 @@ services:
       resources:
         limits:
           memory: 128M
+        reservations:
+          memory: 64M
       restart_policy:
         condition: on-failure
     logging:
@@ -171,6 +181,8 @@ services:
       resources:
         limits:
           memory: 512M
+        reservations:
+          memory: 256M
       restart_policy:
         condition: on-failure
       labels:
@@ -212,6 +224,8 @@ services:
       resources:
         limits:
           memory: 256M
+        reservations:
+          memory: 128M
       restart_policy:
         condition: on-failure
       labels:
@@ -248,7 +262,7 @@ volumes:
     driver_opts:
       type: none
       o: bind
-      device: /mnt/swarm-shared/observability/loki_data
+      device: /mnt/app_data/local/observability/loki_data
   grafana_data:
     driver: local
     driver_opts:

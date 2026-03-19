@@ -51,9 +51,9 @@ All stacks follow these patterns:
 - **Auth** — `authelia@docker` ForwardAuth middleware on protected routes
 - **Domains** — `${BASE_DOMAIN}` variable injected by Infisical Agent
 - **Updates** — `order: start-first` for zero-downtime rolling updates
-- **Resources** — Memory limits on every service
+- **Resources** — Memory limits on every service; reservations on stateful or heavier workloads so Swarm can place them without overcommitting a node
 - **Logging** — `json-file` driver, 10 MB rotation, 3 files max
-- **Storage** — Persistent data on GlusterFS at `/mnt/swarm-shared/<stack>/`
+- **Storage** — Most persistent data on GlusterFS at `/mnt/swarm-shared/<stack>/`; write-heavy pinned services can use node-local block-volume paths under `/mnt/app_data/local/<stack>/`
 - **Image pinning** — Critical services version-pinned; utility/dashboard services may use `:latest`
 
 ## Secrets Management

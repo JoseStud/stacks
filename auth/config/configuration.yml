@@ -4,8 +4,8 @@
 #
 # Secrets are injected via AUTHELIA_* environment variables from docker-compose.yml.
 # This file defines structure and non-secret settings only.
-# Variables overridden by env vars: JWT_SECRET, SESSION_SECRET, STORAGE_POSTGRES_*,
-#   STORAGE_ENCRYPTION_KEY, NOTIFIER_SMTP_*,
+# Variables overridden by env vars: JWT_SECRET, SESSION_SECRET,
+#   STORAGE_POSTGRES_PASSWORD, STORAGE_ENCRYPTION_KEY, NOTIFIER_SMTP_*,
 #   IDENTITY_PROVIDERS_OIDC_HMAC_SECRET
 #
 # Authelia's template filter is enabled at runtime for values nested inside lists,
@@ -80,8 +80,9 @@ regulation:
 
 ###############################################################################
 # Storage — PostgreSQL
-# Connection details injected via env vars:
-#   AUTHELIA_STORAGE_POSTGRES_HOST, _PORT, _DATABASE, _USERNAME, _PASSWORD
+# Authelia 4.38+ requires the unified address key; do not also set legacy
+# AUTHELIA_STORAGE_POSTGRES_HOST or AUTHELIA_STORAGE_POSTGRES_PORT env vars.
+# Only the password is injected via env var.
 ###############################################################################
 storage:
   postgres:
@@ -93,7 +94,7 @@ storage:
 ###############################################################################
 # Notifier — SMTP (Gmail)
 # Credentials injected via env vars:
-#   AUTHELIA_NOTIFIER_SMTP_HOST, _PORT, _USERNAME, _PASSWORD, _SENDER
+#   AUTHELIA_NOTIFIER_SMTP_USERNAME, _PASSWORD, _SENDER
 ###############################################################################
 notifier:
   disable_startup_check: false
