@@ -1,6 +1,6 @@
 services:
   homarr:
-    image: ghcr.io/homarr-org/homarr:latest
+    image: ghcr.io/homarr-labs/homarr:latest
     environment:
       - SECRET_ENCRYPTION_KEY=${HOMARR_SECRET_KEY}
       - AUTH_PROVIDER=credentials

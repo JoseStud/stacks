@@ -1,6 +1,6 @@
 services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:main
+    image: ghcr.io/open-webui/open-webui:latest
     environment:
       - OLLAMA_BASE_URL=http://${ARCH_PC_IP:-192.168.1.100}:11434
       # Keep metadata out of SQLite-on-GlusterFS to prevent migration corruption loops.
