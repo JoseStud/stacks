@@ -11,8 +11,22 @@
 {{- if .AUTHELIA_USERS_DATABASE_YAML }}
 {{ .AUTHELIA_USERS_DATABASE_YAML }}
 {{- else }}
-users: {}
+users:
+  authelia:
+    disabled: true
+    displayname: 'Authelia Admin'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$ODQ0NTg0ODQ0NTg0ODQ0NQ$ODQ0NTg0ODQ0NTg0ODQ0NQ'
+    email: 'authelia@example.com'
+    groups:
+      - admins
 {{- end }}
 {{- else }}
-users: {}
+users:
+  authelia:
+    disabled: true
+    displayname: 'Authelia Admin'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$ODQ0NTg0ODQ0NTg0ODQ0NQ$ODQ0NTg0ODQ0NTg0ODQ0NQ'
+    email: 'authelia@example.com'
+    groups:
+      - admins
 {{- end }}

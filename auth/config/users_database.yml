@@ -12,7 +12,14 @@
 #   /mnt/swarm-shared/auth/authelia/config/users_database.yml
 # by the Ansible-managed Infisical Agent helper.
 
-users: {}
+users:
+  authelia:
+    disabled: true
+    displayname: 'Authelia Admin'
+    password: '$argon2id$v=19$m=65536,t=3,p=4$ODQ0NTg0ODQ0NTg0ODQ0NQ$ODQ0NTg0ODQ0NTg0ODQ0NQ'
+    email: 'authelia@example.com'
+    groups:
+      - admins
   # Example user — uncomment and update with real values:
   #
   # admin:
