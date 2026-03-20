@@ -53,6 +53,7 @@ run_workflow_run_case() {
   local head_sha="$2"
   local source_repo="$3"
   local run_id="$4"
+  local changed_paths_json="${5:-[]}"
   local output_file="${TMP_DIR}/${case_name}.out"
 
   (
@@ -62,6 +63,7 @@ run_workflow_run_case() {
     export WORKFLOW_RUN_HEAD_SHA="${head_sha}"
     export WORKFLOW_RUN_REPOSITORY="${source_repo}"
     export WORKFLOW_RUN_ID="${run_id}"
+    export CHANGED_PATHS_JSON="${changed_paths_json}"
     "${PLANNER}"
   ) >/dev/null
 
@@ -69,7 +71,7 @@ run_workflow_run_case() {
 }
 
 valid_sha="$(printf 'a%.0s' $(seq 1 40))"
-planner_out="$(run_workflow_run_case "workflow_run_payload" "${valid_sha}" "example/stacks" "12345")"
+planner_out="$(run_workflow_run_case "workflow_run_payload" "${valid_sha}" "example/stacks" "12345" '["stacks.yaml"]')"
 assert_eq "workflow_run_payload" "schema_version" "v5" "$(read_output "${planner_out}" "schema_version")"
 assert_eq "workflow_run_payload" "stacks_sha" "${valid_sha}" "$(read_output "${planner_out}" "stacks_sha")"
 assert_eq "workflow_run_payload" "source_sha" "${valid_sha}" "$(read_output "${planner_out}" "source_sha")"
@@ -77,6 +79,19 @@ assert_eq "workflow_run_payload" "reason" "full-reconcile" "$(read_output "${pla
 assert_eq "workflow_run_payload" "source_repo" "example/stacks" "$(read_output "${planner_out}" "source_repo")"
 assert_eq "workflow_run_payload" "source_run_id" "12345" "$(read_output "${planner_out}" "source_run_id")"
 assert_eq "workflow_run_payload" "should_dispatch" "true" "$(read_output "${planner_out}" "should_dispatch")"
+assert_eq "workflow_run_payload" "dispatch_decision_reason" "functional-path-change" "$(read_output "${planner_out}" "dispatch_decision_reason")"
+
+docs_only_out="$(run_workflow_run_case "docs_only" "${valid_sha}" "example/stacks" "12345" '["docs/readme.md"]')"
+assert_eq "docs_only" "should_dispatch" "false" "$(read_output "${docs_only_out}" "should_dispatch")"
+assert_eq "docs_only" "dispatch_decision_reason" "non-functional-change-only" "$(read_output "${docs_only_out}" "dispatch_decision_reason")"
+
+workflow_only_out="$(run_workflow_run_case "workflow_only" "${valid_sha}" "example/stacks" "12345" '[".github/workflows/stacks-ci.yml"]')"
+assert_eq "workflow_only" "should_dispatch" "false" "$(read_output "${workflow_only_out}" "should_dispatch")"
+assert_eq "workflow_only" "dispatch_decision_reason" "non-functional-change-only" "$(read_output "${workflow_only_out}" "dispatch_decision_reason")"
+
+mixed_out="$(run_workflow_run_case "mixed_changes" "${valid_sha}" "example/stacks" "12345" '["docs/readme.md","gateway/docker-compose.yml"]')"
+assert_eq "mixed_changes" "should_dispatch" "true" "$(read_output "${mixed_out}" "should_dispatch")"
+assert_eq "mixed_changes" "dispatch_decision_reason" "functional-path-change" "$(read_output "${mixed_out}" "dispatch_decision_reason")"
 
 valid_payload_json="$(
   jq -cn \

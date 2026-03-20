@@ -27,6 +27,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
 
       - name: Install jq
         # NOTE: jq is installed inline because the stacks sub-repo cannot
@@ -39,6 +40,24 @@ jobs:
           sudo apt-get install -y jq
           jq --version
 
+      - name: Detect changed paths for dispatch planning
+        id: changes
+        run: |
+          set -euo pipefail
+
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          # Limitation: this planner currently classifies only HEAD^..HEAD.
+          # For multi-commit pushes, earlier commit paths are not included
+          # in this diff and could under-report functional changes.
+          if git rev-parse --verify "${HEAD_SHA}^" >/dev/null 2>&1; then
+            CHANGED_PATHS_JSON="$(git diff --name-only "${HEAD_SHA}^" "${HEAD_SHA}" | jq -R -s -c 'split("\n") | map(select(length > 0))')"
+          else
+            CHANGED_PATHS_JSON="[]"
+          fi
+
+          echo "changed_paths_json=${CHANGED_PATHS_JSON}" >> "${GITHUB_OUTPUT}"
+          echo "Detected changed paths JSON: ${CHANGED_PATHS_JSON}"
+
       - name: Build redeploy request payload
         id: plan
         env:
@@ -46,7 +65,16 @@ jobs:
           WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           WORKFLOW_RUN_REPOSITORY: ${{ github.event.workflow_run.repository.full_name }}
           WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          CHANGED_PATHS_JSON: ${{ steps.changes.outputs.changed_paths_json }}
         run: .github/scripts/plan_redeploy_payload.sh
+
+      - name: Log dispatch skip reason
+        if: ${{ steps.plan.outputs.should_dispatch != 'true' }}
+        run: |
+          set -euo pipefail
+          echo "Dispatch skipped by planner."
+          echo "Reason: ${{ steps.plan.outputs.dispatch_decision_reason }}"
+          echo "Changed paths JSON: ${{ steps.changes.outputs.changed_paths_json }}"
 
       - name: Validate dispatch payload contract
         if: ${{ steps.plan.outputs.should_dispatch == 'true' }}
