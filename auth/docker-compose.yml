@@ -29,6 +29,21 @@ services:
       - X_AUTHELIA_CONFIG_FILTERS=template
     volumes:
       - /mnt/swarm-shared/auth/authelia/config:/config
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        max_attempts=40
+        attempt=1
+        until authelia storage schema-info >/dev/null 2>&1; do
+          if [ "$$attempt" -ge "$$max_attempts" ]; then
+            echo "Authelia startup aborted: Postgres is not ready after $${max_attempts} attempts."
+            exit 1
+          fi
+          echo "Waiting for Postgres (attempt $${attempt}/$${max_attempts})..."
+          attempt=$$((attempt + 1))
+          sleep 3
+        done
+        exec authelia
     networks:
       - traefik_proxy
       - authelia_internal
