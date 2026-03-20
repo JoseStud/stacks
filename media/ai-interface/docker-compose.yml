@@ -85,10 +85,11 @@ services:
       timeout: 5s
       retries: 5
 
-  openclaw-gateway:
-    image: openclaw/gateway:latest
+  openclaw:
+    image: ghcr.io/openclaw/openclaw:latest
     volumes:
       - /mnt/swarm-shared/ai-interface/openclaw/config:/app/config
+      - /mnt/swarm-shared/ai-interface/openclaw/config:/root/.openclaw
     networks:
       - traefik_proxy
     deploy:
@@ -101,9 +102,9 @@ services:
           - node.labels.location == cloud
       resources:
         limits:
-          memory: 256M
+          memory: 512M
         reservations:
-          memory: 128M
+          memory: 256M
       restart_policy:
         condition: on-failure
       labels:
@@ -113,29 +114,6 @@ services:
         - "traefik.http.routers.openclaw.tls.certresolver=letsencrypt"
         - "traefik.http.routers.openclaw.middlewares=authelia@docker"
         - "traefik.http.services.openclaw.loadbalancer.server.port=8000"
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  openclaw-cli:
-    image: openclaw/cli:latest
-    volumes:
-      - /mnt/swarm-shared/ai-interface/openclaw/config:/root/.openclaw
-    deploy:
-      update_config:
-        parallelism: 1
-        delay: 10s
-        order: start-first
-      placement:
-        constraints:
-          - node.labels.location == cloud
-      resources:
-        limits:
-          memory: 128M
-        reservations:
-          memory: 64M
     logging:
       driver: json-file
       options:
