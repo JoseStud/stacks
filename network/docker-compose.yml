@@ -99,11 +99,13 @@ services:
     environment:
       - TZ=${TZ}
       - WEBPASSWORD=${PIHOLE_PASSWORD}
-      - PIHOLE_DNS_=1.1.1.1;8.8.8.8
+      - PIHOLE_DNS_=${PIHOLE_UPSTREAMS:-1.1.1.1;8.8.8.8}
+      - FTLCONF_dns_upstreams=${PIHOLE_UPSTREAMS:-1.1.1.1;8.8.8.8}
       - DNSMASQ_LISTENING=all
+      - FTLCONF_dns_listeningMode=all
     volumes:
-      - /mnt/swarm-shared/network/pihole/node1/etc-pihole:/etc/pihole
-      - /mnt/swarm-shared/network/pihole/node1/etc-dnsmasq.d:/etc/dnsmasq.d
+      - /mnt/app_data/local/network/pihole/node1/etc-pihole:/etc/pihole
+      - /mnt/app_data/local/network/pihole/node1/etc-dnsmasq.d:/etc/dnsmasq.d
     ports:
       - target: 53
         published: 53
@@ -153,11 +155,13 @@ services:
     environment:
       - TZ=${TZ}
       - WEBPASSWORD=${PIHOLE_PASSWORD}
-      - PIHOLE_DNS_=1.1.1.1;8.8.8.8
+      - PIHOLE_DNS_=${PIHOLE_UPSTREAMS:-1.1.1.1;8.8.8.8}
+      - FTLCONF_dns_upstreams=${PIHOLE_UPSTREAMS:-1.1.1.1;8.8.8.8}
       - DNSMASQ_LISTENING=all
+      - FTLCONF_dns_listeningMode=all
     volumes:
-      - /mnt/swarm-shared/network/pihole/node2/etc-pihole:/etc/pihole
-      - /mnt/swarm-shared/network/pihole/node2/etc-dnsmasq.d:/etc/dnsmasq.d
+      - /mnt/app_data/local/network/pihole/node2/etc-pihole:/etc/pihole
+      - /mnt/app_data/local/network/pihole/node2/etc-dnsmasq.d:/etc/dnsmasq.d
     ports:
       - target: 53
         published: 53

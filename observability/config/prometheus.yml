@@ -41,5 +41,5 @@ scrape_configs:
   # Loki — log aggregation system metrics
   - job_name: 'loki'
     static_configs:
-      - targets: ['observability_loki:3100']
+      - targets: ['tasks.observability_loki:3100']
     metrics_path: '/metrics'

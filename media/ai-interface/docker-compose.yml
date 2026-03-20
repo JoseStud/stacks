@@ -87,6 +87,9 @@ services:
 
   openclaw:
     image: ghcr.io/openclaw/openclaw:latest
+    environment:
+      # Keep V8 heap below container memory limit to avoid repeated OOM restarts.
+      - NODE_OPTIONS=--max-old-space-size=768
     volumes:
       - /mnt/swarm-shared/ai-interface/openclaw/config:/app/config
       - /mnt/swarm-shared/ai-interface/openclaw/config:/root/.openclaw
@@ -102,9 +105,11 @@ services:
           - node.labels.location == cloud
       resources:
         limits:
-          memory: 512M
+          cpus: "2.0"
+          memory: 2G
         reservations:
-          memory: 256M
+          cpus: "1.0"
+          memory: 1G
       restart_policy:
         condition: on-failure
       labels:

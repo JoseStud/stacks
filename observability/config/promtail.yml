@@ -12,8 +12,8 @@ positions:
   filename: /tmp/positions.yaml
 
 clients:
-  # Use stack-qualified DNS for reliable Swarm name resolution on external overlays.
-  - url: http://observability_loki:3100/loki/api/v1/push
+  # Target the Swarm service DNS record explicitly (matches docker service name).
+  - url: http://tasks.observability_loki:3100/loki/api/v1/push
     tenant_id: ''
 
 scrape_configs:

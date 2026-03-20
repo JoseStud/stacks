@@ -20,7 +20,7 @@ services:
           - node.labels.location == cloud
       resources:
         limits:
-          memory: 256M
+          memory: 2G
       restart_policy:
         condition: on-failure
       labels:
