@@ -62,7 +62,6 @@ scrape_configs:
             message: message
             ts: time
             timestamp: timestamp
-          source: ''
       # If JSON parsing extracted a level, promote it
       - labels:
           level:
