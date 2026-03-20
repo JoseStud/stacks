@@ -1,6 +1,6 @@
 services:
   socket-proxy:
-    image: tecnativa/docker-socket-proxy:2.7.0
+    image: tecnativa/docker-socket-proxy:v0.4.2
     environment:
       - CONTAINERS=1
       - NETWORKS=1

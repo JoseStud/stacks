@@ -30,6 +30,9 @@ services:
           memory: 128M
       restart_policy:
         condition: on-failure
+        delay: 10s
+        max_attempts: 15
+        window: 2m
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.vaultwarden.rule=Host(`vault.${BASE_DOMAIN}`)"

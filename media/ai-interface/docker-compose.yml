@@ -3,11 +3,14 @@ services:
     image: ghcr.io/open-webui/open-webui:main
     environment:
       - OLLAMA_BASE_URL=http://${ARCH_PC_IP:-192.168.1.100}:11434
+      # Keep metadata out of SQLite-on-GlusterFS to prevent migration corruption loops.
+      - DATABASE_URL=postgresql://openwebui:${OPENWEBUI_DB_PASS}@open-webui-db:5432/openwebui
       - TZ=${TZ}
     volumes:
       - /mnt/swarm-shared/ai-interface/open-webui:/app/backend/data
     networks:
       - traefik_proxy
+      - openwebui_internal
     deploy:
       update_config:
         parallelism: 1
@@ -37,9 +40,50 @@ services:
         max-file: "3"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      start_period: 5m
       interval: 30s
       timeout: 10s
       retries: 3
+
+  open-webui-db:
+    image: postgres:16-alpine
+    stop_grace_period: 2m
+    environment:
+      - POSTGRES_USER=openwebui
+      - POSTGRES_PASSWORD=${OPENWEBUI_DB_PASS}
+      - POSTGRES_DB=openwebui
+    volumes:
+      # Pin PGDATA to node-local storage; avoid fsync latency/corruption on shared FS.
+      - openwebui_db_data:/var/lib/postgresql/data
+    networks:
+      - openwebui_internal
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      placement:
+        constraints:
+          - node.labels.location == cloud
+          - node.hostname == app-worker-2
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openwebui"]
+      start_period: 2m
+      interval: 15s
+      timeout: 5s
+      retries: 5
 
   openclaw-gateway:
     image: openclaw/gateway:latest
@@ -101,3 +145,14 @@ services:
 networks:
   traefik_proxy:
     external: true
+  openwebui_internal:
+    driver: overlay
+    attachable: false
+
+volumes:
+  openwebui_db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/app_data/local/ai-interface/open-webui-db
