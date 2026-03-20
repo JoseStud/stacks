@@ -86,8 +86,8 @@ regulation:
 ###############################################################################
 storage:
   postgres:
-    # In Swarm, the stack-qualified service name resolves more reliably during startup.
-    address: 'tcp://auth_authelia-db:5432'
+    # Use the local service name on the shared overlay network.
+    address: 'tcp://authelia-db:5432'
     database: 'authelia'
     username: 'authelia'
     # password: injected via AUTHELIA_STORAGE_POSTGRES_PASSWORD env var
