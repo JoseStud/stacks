@@ -32,7 +32,9 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
-        max_attempts=40
+        # Allow slow PostgreSQL recovery/placement events during Swarm startup.
+        max_attempts="${AUTHELIA_DB_WAIT_MAX_ATTEMPTS:-120}"
+        sleep_seconds="${AUTHELIA_DB_WAIT_SLEEP_SECONDS:-20}"
         attempt=1
         until authelia storage schema-info >/dev/null 2>&1; do
           if [ "$$attempt" -ge "$$max_attempts" ]; then
@@ -41,7 +43,7 @@ services:
           fi
           echo "Waiting for Postgres (attempt $${attempt}/$${max_attempts})..."
           attempt=$$((attempt + 1))
-          sleep 3
+          sleep "$$sleep_seconds"
         done
         exec authelia
     networks:
