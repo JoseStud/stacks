@@ -219,6 +219,7 @@ services:
     image: postgres:18.3-alpine
     stop_grace_period: 2m
     environment:
+      - PGDATA=/var/lib/postgresql/data
       - POSTGRES_USER=grafana
       - POSTGRES_PASSWORD=${GF_DB_PASS}
       - POSTGRES_DB=grafana
