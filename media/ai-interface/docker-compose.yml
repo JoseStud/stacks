@@ -1,6 +1,6 @@
 services:
   open-webui:
-    image: ghcr.io/open-webui/open-webui:latest
+    image: ghcr.io/open-webui/open-webui:v0.8.10
     environment:
       - OLLAMA_BASE_URL=http://${ARCH_PC_IP:-192.168.1.100}:11434
       # Keep metadata out of SQLite-on-GlusterFS to prevent migration corruption loops.
@@ -46,7 +46,7 @@ services:
       retries: 3
 
   open-webui-db:
-    image: postgres:16-alpine
+    image: postgres:18.3-alpine
     stop_grace_period: 2m
     environment:
       - POSTGRES_USER=openwebui
@@ -86,7 +86,7 @@ services:
       retries: 5
 
   openclaw:
-    image: ghcr.io/openclaw/openclaw:latest
+    image: ghcr.io/openclaw/openclaw:v2026.3.13-1
     environment:
       # Keep V8 heap below container memory limit to avoid repeated OOM restarts.
       - NODE_OPTIONS=--max-old-space-size=1536

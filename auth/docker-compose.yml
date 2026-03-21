@@ -1,6 +1,6 @@
 services:
   authelia:
-    image: authelia/authelia:4.38.19
+    image: authelia/authelia:4.39.16
     environment:
       - BASE_DOMAIN=${BASE_DOMAIN}
       - AUTHELIA_IDENTITY_VALIDATION_RESET_PASSWORD_JWT_SECRET=${AUTHELIA_JWT_SECRET}
@@ -85,7 +85,7 @@ services:
       retries: 3
 
   authelia-db:
-    image: postgres:16-alpine
+    image: postgres:18.3-alpine
     environment:
       - POSTGRES_USER=authelia
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}

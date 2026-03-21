@@ -1,6 +1,6 @@
 services:
   filebrowser:
-    image: filebrowser/filebrowser:v2-s6
+    image: filebrowser/filebrowser:v2.62.1-s6
     environment:
       - TZ=${TZ}
     volumes:
