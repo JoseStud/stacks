@@ -28,7 +28,7 @@ services:
         - "traefik.http.routers.homarr.rule=Host(`home.${BASE_DOMAIN}`)"
         - "traefik.http.routers.homarr.entrypoints=websecure"
         - "traefik.http.routers.homarr.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.homarr.middlewares=authelia@docker"
+        - "traefik.http.routers.homarr.middlewares=authelia@swarm"
         - "traefik.http.services.homarr.loadbalancer.server.port=7575"
     logging:
       driver: json-file
@@ -76,7 +76,7 @@ services:
         - "traefik.http.routers.portainer.rule=Host(`portainer.${BASE_DOMAIN}`)"
         - "traefik.http.routers.portainer.entrypoints=websecure"
         - "traefik.http.routers.portainer.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.portainer.middlewares=authelia@docker"
+        - "traefik.http.routers.portainer.middlewares=authelia@swarm"
         - "traefik.http.services.portainer.loadbalancer.server.port=9000"
         # portainer-api Traefik router removed: CI automation now accesses
         # Portainer directly via its Tailscale IP (http://<ts_ip>:9000/api).

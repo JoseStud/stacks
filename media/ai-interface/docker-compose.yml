@@ -31,7 +31,7 @@ services:
         - "traefik.http.routers.openwebui.rule=Host(`ai.${BASE_DOMAIN}`)"
         - "traefik.http.routers.openwebui.entrypoints=websecure"
         - "traefik.http.routers.openwebui.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.openwebui.middlewares=authelia@docker"
+        - "traefik.http.routers.openwebui.middlewares=authelia@swarm"
         - "traefik.http.services.openwebui.loadbalancer.server.port=8080"
     logging:
       driver: json-file
@@ -87,7 +87,7 @@ services:
       retries: 5
 
   openclaw:
-    image: ghcr.io/openclaw/openclaw:v2026.3.13-1
+    image: ghcr.io/openclaw/openclaw:2026.3.13-1
     environment:
       # Keep V8 heap below container memory limit to avoid repeated OOM restarts.
       - NODE_OPTIONS=--max-old-space-size=1536
@@ -115,10 +115,10 @@ services:
         condition: on-failure
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.openclaw.rule=Host(`gateway.${BASE_DOMAIN}`)"
+        - "traefik.http.routers.openclaw.rule=Host(`openclaw.${BASE_DOMAIN}`)"
         - "traefik.http.routers.openclaw.entrypoints=websecure"
         - "traefik.http.routers.openclaw.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.openclaw.middlewares=authelia@docker"
+        - "traefik.http.routers.openclaw.middlewares=authelia@swarm"
         - "traefik.http.services.openclaw.loadbalancer.server.port=8000"
     logging:
       driver: json-file

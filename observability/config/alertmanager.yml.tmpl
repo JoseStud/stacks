@@ -20,12 +20,9 @@ route:
 receivers:
   - name: 'webhook'
     webhook_configs:
-{{- with secret "/stacks/observability" }}
-{{- if .ALERTMANAGER_WEBHOOK_URL }}
-      - url: '{{ .ALERTMANAGER_WEBHOOK_URL }}'
-{{- else }}
-      - url: 'http://127.0.0.1:65535/'
-{{- end }}
+{{- $wh := getSecretByName "__INFISICAL_PROJECT_ID__" "__INFISICAL_ENV__" "/stacks/observability" "ALERTMANAGER_WEBHOOK_URL" }}
+{{- if $wh.Value }}
+      - url: '{{ $wh.Value }}'
 {{- else }}
       - url: 'http://127.0.0.1:65535/'
 {{- end }}

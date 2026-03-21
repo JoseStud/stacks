@@ -138,7 +138,7 @@ services:
         - "traefik.http.routers.pihole.rule=Host(`dns.${BASE_DOMAIN}`)"
         - "traefik.http.routers.pihole.entrypoints=websecure"
         - "traefik.http.routers.pihole.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.pihole.middlewares=authelia@docker"
+        - "traefik.http.routers.pihole.middlewares=authelia@swarm"
         - "traefik.http.services.pihole.loadbalancer.server.port=80"
     logging:
       driver: json-file
@@ -194,7 +194,7 @@ services:
         - "traefik.http.routers.pihole-2.rule=Host(`dns2.${BASE_DOMAIN}`)"
         - "traefik.http.routers.pihole-2.entrypoints=websecure"
         - "traefik.http.routers.pihole-2.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.pihole-2.middlewares=authelia@docker"
+        - "traefik.http.routers.pihole-2.middlewares=authelia@swarm"
         - "traefik.http.services.pihole-2.loadbalancer.server.port=80"
     logging:
       driver: json-file
@@ -211,7 +211,7 @@ services:
   # Orbital Sync — Keeps Pi-hole blocklists in sync via REST API
   # ──────────────────────────────────────────────
   orbital-sync:
-    image: ghcr.io/mattwebbio/orbital-sync:v1.8.4
+    image: ghcr.io/mattwebbio/orbital-sync:1.8.4
     environment:
       - PRIMARY_HOST_BASE_URL=http://pihole-1
       - PRIMARY_HOST_PASSWORD=${PIHOLE_PASSWORD}

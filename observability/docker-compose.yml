@@ -32,7 +32,7 @@ services:
         - "traefik.http.routers.prometheus.rule=Host(`prometheus.${BASE_DOMAIN}`)"
         - "traefik.http.routers.prometheus.entrypoints=websecure"
         - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.prometheus.middlewares=authelia@docker"
+        - "traefik.http.routers.prometheus.middlewares=authelia@swarm"
         - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
     logging:
       driver: json-file
@@ -77,10 +77,11 @@ services:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      test: ["CMD", "/usr/bin/loki", "-target=healthcheck", "-config.file=/etc/loki/loki-config.yaml"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   promtail:
     image: grafana/promtail:3.6.7
@@ -99,7 +100,7 @@ services:
       mode: global
       placement:
         constraints:
-          - node.role == worker
+          - node.labels.location == cloud
       resources:
         limits:
           memory: 128M
@@ -113,10 +114,11 @@ services:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9080/ready"]
+      test: ["CMD", "/usr/bin/promtail", "-target=healthcheck", "-config.file=/etc/promtail/promtail.yml"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 15s
 
   node-exporter:
     image: prom/node-exporter:v1.10.2
@@ -202,7 +204,7 @@ services:
         - "traefik.http.routers.grafana.rule=Host(`grafana.${BASE_DOMAIN}`)"
         - "traefik.http.routers.grafana.entrypoints=websecure"
         - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.grafana.middlewares=authelia@docker"
+        - "traefik.http.routers.grafana.middlewares=authelia@swarm"
         - "traefik.http.services.grafana.loadbalancer.server.port=3000"
     logging:
       driver: json-file
@@ -287,7 +289,7 @@ services:
         - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.${BASE_DOMAIN}`)"
         - "traefik.http.routers.alertmanager.entrypoints=websecure"
         - "traefik.http.routers.alertmanager.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.alertmanager.middlewares=authelia@docker"
+        - "traefik.http.routers.alertmanager.middlewares=authelia@swarm"
         - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
     logging:
       driver: json-file

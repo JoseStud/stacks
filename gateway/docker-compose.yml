@@ -4,6 +4,7 @@ services:
     environment:
       - CONTAINERS=1
       - NETWORKS=1
+      - NODES=1
       - SERVICES=1
       - SWARM=1
       - TASKS=1
@@ -33,6 +34,9 @@ services:
 
   traefik:
     image: traefik:v3.6.11
+    # Bypass the image entrypoint.sh which double-prepends "traefik" in v3.6.x
+    # when command args start with "-", causing all CLI flags to be silently ignored.
+    entrypoint: ["traefik"]
     environment:
       - CF_DNS_API_TOKEN=${CLOUDFLARE_API_TOKEN}
       - CF_ZONE_API_TOKEN=${CLOUDFLARE_API_TOKEN}
@@ -41,7 +45,7 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        order: start-first
+        order: stop-first
       replicas: 2
       placement:
         constraints:
@@ -57,6 +61,7 @@ services:
         - "traefik.http.routers.gateway-health.entrypoints=websecure"
         - "traefik.http.routers.gateway-health.tls.certresolver=letsencrypt"
         - "traefik.http.routers.gateway-health.service=ping@internal"
+        - "traefik.http.services.gateway-traefik.loadbalancer.server.port=8082"
     ports:
       - target: 80
         published: 80
@@ -67,12 +72,15 @@ services:
     volumes:
       - traefik_acme:/etc/traefik/acme
     command:
+      - "--log.level=INFO"
       - "--providers.swarm=true"
       - "--providers.swarm.exposedbydefault=false"
       - "--providers.swarm.endpoint=${DOCKER_SOCKET_PROXY_URL:-tcp://tasks.socket-proxy:2375}"
       - "--providers.swarm.network=traefik_proxy"
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
+      - "--entrypoints.websecure.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32"
+      - "--entrypoints.web.forwardedHeaders.trustedIPs=173.245.48.0/20,103.21.244.0/22,103.22.200.0/22,103.31.4.0/22,141.101.64.0/18,108.162.192.0/18,190.93.240.0/20,188.114.96.0/20,197.234.240.0/22,198.41.128.0/17,162.158.0.0/15,104.16.0.0/13,104.24.0.0/14,172.64.0.0/13,131.0.72.0/22,2400:cb00::/32,2606:4700::/32,2803:f800::/32,2405:b500::/32,2405:8100::/32,2a06:98c0::/29,2c0f:f248::/32"
       - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
       - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"

@@ -26,7 +26,7 @@ services:
         - "traefik.http.routers.filebrowser.rule=Host(`files.${BASE_DOMAIN}`)"
         - "traefik.http.routers.filebrowser.entrypoints=websecure"
         - "traefik.http.routers.filebrowser.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.filebrowser.middlewares=authelia@docker"
+        - "traefik.http.routers.filebrowser.middlewares=authelia@swarm"
         - "traefik.http.services.filebrowser.loadbalancer.server.port=80"
     logging:
       driver: json-file

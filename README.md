@@ -48,7 +48,7 @@ Stacks with bind-mounted configs (`auth`, `observability`) include a `config/` s
 All stacks follow these patterns:
 
 - **Routing** — Traefik labels on `deploy.labels` (Swarm mode); `tls.certresolver=letsencrypt` for ACME TLS
-- **Auth** — `authelia@docker` ForwardAuth middleware on protected routes
+- **Auth** — `authelia@swarm` ForwardAuth middleware on protected routes
 - **Domains** — `${BASE_DOMAIN}` variable injected by Infisical Agent
 - **Updates** — `order: start-first` for zero-downtime rolling updates
 - **Resources** — Memory limits on every service; reservations on stateful or heavier workloads so Swarm can place them without overcommitting a node

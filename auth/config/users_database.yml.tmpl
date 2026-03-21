@@ -7,19 +7,9 @@
 # and then copied to /mnt/swarm-shared/auth/authelia/config/users_database.yml
 # by the Ansible-managed auth users sync helper on the primary manager.
 
-{{- with secret "/stacks/identity" }}
-{{- if .AUTHELIA_USERS_DATABASE_YAML }}
-{{ .AUTHELIA_USERS_DATABASE_YAML }}
-{{- else }}
-users:
-  authelia:
-    disabled: true
-    displayname: 'Authelia Admin'
-    password: '$argon2id$v=19$m=65536,t=3,p=4$ODQ0NTg0ODQ0NTg0ODQ0NQ$ODQ0NTg0ODQ0NTg0ODQ0NQ'
-    email: 'authelia@example.com'
-    groups:
-      - admins
-{{- end }}
+{{- $db := getSecretByName "__INFISICAL_PROJECT_ID__" "__INFISICAL_ENV__" "/stacks/identity" "AUTHELIA_USERS_DATABASE_YAML" }}
+{{- if $db.Value }}
+{{ $db.Value }}
 {{- else }}
 users:
   authelia:

@@ -3,10 +3,17 @@ services:
     image: louislam/uptime-kuma:2.2.1
     environment:
       - TZ=${TZ}
+      - UPTIME_KUMA_DB_TYPE=mariadb
+      - UPTIME_KUMA_DB_HOSTNAME=uptime-kuma-db
+      - UPTIME_KUMA_DB_PORT=3306
+      - UPTIME_KUMA_DB_NAME=kuma
+      - UPTIME_KUMA_DB_USERNAME=kuma
+      - UPTIME_KUMA_DB_PASSWORD=${UPTIME_KUMA_DB_PASS}
     volumes:
       - /mnt/swarm-shared/uptime-kuma/data:/app/data
     networks:
       - traefik_proxy
+      - uptime_internal
     deploy:
       update_config:
         parallelism: 1
@@ -25,7 +32,7 @@ services:
         - "traefik.http.routers.uptime-kuma.rule=Host(`status.${BASE_DOMAIN}`)"
         - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
         - "traefik.http.routers.uptime-kuma.tls.certresolver=letsencrypt"
-        - "traefik.http.routers.uptime-kuma.middlewares=authelia@docker"
+        - "traefik.http.routers.uptime-kuma.middlewares=authelia@swarm"
         - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
     logging:
       driver: json-file
@@ -38,6 +45,54 @@ services:
       timeout: 10s
       retries: 3
 
+  # Keep MariaDB on the node-local block volume; GlusterFS adds fsync latency.
+  uptime-kuma-db:
+    image: mariadb:10.11
+    stop_grace_period: 2m
+    environment:
+      - MARIADB_DATABASE=kuma
+      - MARIADB_USER=kuma
+      - MARIADB_PASSWORD=${UPTIME_KUMA_DB_PASS}
+      - MARIADB_RANDOM_ROOT_PASSWORD=1
+    volumes:
+      - uptime_kuma_db_data:/var/lib/mysql
+    networks:
+      - uptime_internal
+    deploy:
+      placement:
+        constraints:
+          - node.labels.location == cloud
+          - node.hostname == app-worker-1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh --connect --innodb_initialized"]
+      start_period: 2m
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
 networks:
   traefik_proxy:
     external: true
+  uptime_internal:
+    driver: overlay
+    attachable: false
+
+volumes:
+  uptime_kuma_db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/app_data/local/uptime/uptime-kuma-db
