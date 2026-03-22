@@ -9,12 +9,8 @@ on:
       - "infisical-agent.yaml"
       - "auth/config/**"
       - "observability/config/**"
-      - ".github/scripts/plan_redeploy_payload.sh"
-      - ".github/scripts/test_redeploy_planner.sh"
-      - ".github/scripts/validate_dispatch_payload.sh"
       - ".github/scripts/validate_stacks_manifest.sh"
       - ".github/workflows/stacks-ci.yml"
-      - ".github/workflows/stacks-dispatch-redeploy.yml"
   push:
     branches:
       - main
@@ -25,12 +21,8 @@ on:
       - "infisical-agent.yaml"
       - "auth/config/**"
       - "observability/config/**"
-      - ".github/scripts/plan_redeploy_payload.sh"
-      - ".github/scripts/test_redeploy_planner.sh"
-      - ".github/scripts/validate_dispatch_payload.sh"
       - ".github/scripts/validate_stacks_manifest.sh"
       - ".github/workflows/stacks-ci.yml"
-      - ".github/workflows/stacks-dispatch-redeploy.yml"
   workflow_dispatch:
 
 permissions:
@@ -83,6 +75,3 @@ jobs:
 
       - name: Validate stack manifest and compose files
         run: .github/scripts/validate_stacks_manifest.sh
-
-      - name: Run redeploy planner contract tests
-        run: .github/scripts/test_redeploy_planner.sh

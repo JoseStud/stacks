@@ -6,10 +6,17 @@ services:
       - AUTH_PROVIDER=credentials
       - BASE_URL=https://home.${BASE_DOMAIN}
       - TZ=${TZ}
+      - DATABASE_DIALECT=postgres
+      - DATABASE_HOST=homarr-db
+      - DATABASE_PORT=5432
+      - DATABASE_NAME=homarr
+      - DATABASE_USER=homarr
+      - DATABASE_PASSWORD=${HOMARR_DB_PASS}
     volumes:
       - /mnt/swarm-shared/management/homarr/appdata:/appdata
     networks:
       - traefik_proxy
+      - management_internal
     deploy:
       update_config:
         parallelism: 1
@@ -42,6 +49,44 @@ services:
       start_period: 90s
       interval: 30s
       timeout: 10s
+      retries: 5
+
+  homarr-db:
+    image: postgres:18.3-alpine
+    environment:
+      - PGDATA=/var/lib/postgresql/data
+      - POSTGRES_USER=homarr
+      - POSTGRES_PASSWORD=${HOMARR_DB_PASS}
+      - POSTGRES_DB=homarr
+    volumes:
+      - homarr_db_data:/var/lib/postgresql/data
+    networks:
+      - management_internal
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      placement:
+        constraints:
+          - node.labels.location == cloud
+          - node.hostname == app-worker-1
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U homarr"]
+      interval: 15s
+      timeout: 5s
       retries: 5
 
   portainer-server:
@@ -119,7 +164,16 @@ networks:
   portainer_agent:
     driver: overlay
     attachable: false
+  management_internal:
+    driver: overlay
+    attachable: false
 
 volumes:
   portainer_db:
     driver: local
+  homarr_db_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/app_data/local/management/homarr-db
