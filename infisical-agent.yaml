@@ -50,7 +50,7 @@ templates:
       execute:
         command: >-
           {% if inventory_hostname == runtime_sync_primary_manager -%}
-          docker stack deploy -c /opt/stacks/management/docker-compose.yml management
+          /bin/sh -c 'set -a; . /opt/stacks/management/.env; set +a; docker stack deploy -c /opt/stacks/management/docker-compose.yml management'
           {%- else -%}
           /bin/sh -lc 'echo "Skipping management deploy on {{ inventory_hostname }}; primary manager is {{ runtime_sync_primary_manager }}."; exit 0'
           {%- endif %}

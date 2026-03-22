@@ -107,14 +107,14 @@ services:
         reservations:
           memory: 64M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD", "/usr/bin/promtail", "-target=healthcheck", "-config.file=/etc/promtail/promtail.yml"]
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9080/ready || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
