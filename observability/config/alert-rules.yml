@@ -60,3 +60,11 @@ groups:
         annotations:
           summary: "Traefik high 5xx error rate"
           description: "Traefik is returning more than 5% 5xx responses (current: {{ $value | printf \"%.1f\" }}%)."
+
+  - name: recording-rules
+    rules:
+      # Synthetic lookup metric used by Docker Swarm Dashboard (ssc2, gnetId 11939).
+      # Joins node_id / node_name onto node-exporter metrics via `* on(instance) group_left(node_name) node_meta`.
+      # Inherits instance, node_id, and node_name labels from the node-exporter scrape targets.
+      - record: node_meta
+        expr: up{job="node-exporter"}

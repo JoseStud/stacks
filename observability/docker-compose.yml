@@ -1,10 +1,14 @@
 services:
   prometheus:
     image: prom/prometheus:v3.10.0
+    # Run as nobody:docker (65534:999) so the process can read the Docker socket
+    # for dockerswarm_sd_configs while avoiding full root privileges.
+    user: "65534:999"
     volumes:
       - /mnt/swarm-shared/observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - /mnt/swarm-shared/observability/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus_data:/prometheus
+      - /var/run/docker.sock:/var/run/docker.sock:ro
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
@@ -62,7 +66,8 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        order: start-first
+        order: stop-first
+        monitor: 2m
       placement:
         constraints:
           - node.labels.location == cloud
@@ -79,12 +84,11 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # Loki 3.6.7 is distroless (no shell/wget/curl) and `loki -target=healthcheck`
+    # takes >30s to initialize, causing Swarm to kill the container after 3 failures.
+    # Disable the healthcheck to avoid restart loops.
     healthcheck:
-      test: ["CMD", "/usr/bin/loki", "-target=healthcheck", "-config.file=/etc/loki/loki-config.yaml"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
+      disable: true
 
   promtail:
     image: grafana/promtail:3.6.7
@@ -117,7 +121,7 @@ services:
         max-size: "10m"
         max-file: "3"
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:9080/ready || exit 1"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/9080'"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -160,6 +164,40 @@ services:
       timeout: 10s
       retries: 3
 
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - traefik_proxy
+    deploy:
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      mode: global
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   grafana:
     image: grafana/grafana:12.4.1
     environment:
@@ -179,6 +217,7 @@ services:
       - GF_AUTH_GENERIC_OAUTH_TOKEN_URL=https://auth.${BASE_DOMAIN}/api/oidc/token
       - GF_AUTH_GENERIC_OAUTH_API_URL=https://auth.${BASE_DOMAIN}/api/oidc/userinfo
       - GF_AUTH_GENERIC_OAUTH_ROLE_ATTRIBUTE_PATH=contains(groups[*], 'admins') && 'Admin' || 'Viewer'
+      - GF_AUTH_GENERIC_OAUTH_SKIP_ORG_ROLE_SYNC=false
       - GF_AUTH_DISABLE_LOGIN_FORM=true
       - TZ=${TZ}
     volumes:

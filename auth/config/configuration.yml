@@ -132,6 +132,10 @@ access_control:
 identity_providers:
   oidc:
     # hmac_secret: injected via AUTHELIA_IDENTITY_PROVIDERS_OIDC_HMAC_SECRET
+    claims_policies:
+      grafana:
+        id_token:
+          - 'groups'
     jwks:
       - key_id: 'main'
         algorithm: 'RS256'
@@ -143,6 +147,7 @@ identity_providers:
         client_secret: {{ mustEnv "AUTH_GRAFANA_OIDC_CLIENT_SECRET_HASH" | squote }}
         public: false
         authorization_policy: 'two_factor'
+        claims_policy: 'grafana'
         redirect_uris:
           - {{ printf "https://grafana.%s/login/generic_oauth" (mustEnv "BASE_DOMAIN") | squote }}
         scopes:

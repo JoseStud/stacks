@@ -22,12 +22,37 @@ scrape_configs:
       - targets: ['localhost:9090']
 
   # Node Exporter — host metrics (deployed globally via Swarm)
-  # Uses Swarm DNS to resolve all task replicas
+  # Uses Docker Swarm SD to discover tasks and inject node identity labels
+  # (node_id, node_name) required by the Docker Swarm Dashboard.
   - job_name: 'node-exporter'
-    dns_sd_configs:
-      - names: ['tasks.node-exporter']
-        type: 'A'
-        port: 9100
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
+        filters:
+          - name: service
+            values: ['observability_node-exporter']
+    relabel_configs:
+      # Only keep running tasks
+      - source_labels: [__meta_dockerswarm_task_desired_state]
+        regex: running
+        action: keep
+      # Docker Swarm SD sets __address__ to <overlay_ip>:80 for services without
+      # published ports. Replace the port with node-exporter's actual port.
+      - source_labels: [__address__]
+        regex: '(.+):\d+'
+        target_label: __address__
+        replacement: '${1}:9100'
+      # Inject Swarm node ID (matches Promtail's node_id label for Loki)
+      - source_labels: [__meta_dockerswarm_node_id]
+        target_label: node_id
+      # Inject human-readable node hostname
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        target_label: node_name
+      # Drop the quorum-only witness — overlay routing to GCP is unreliable
+      # and the witness runs no real workloads worth monitoring.
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        regex: 'swarm-witness'
+        action: drop
 
   # Traefik — reverse proxy metrics
   # Exposed on dedicated metrics entrypoint (gateway stack)
@@ -37,6 +62,34 @@ scrape_configs:
         type: 'A'
         port: 8082
     metrics_path: '/metrics'
+
+  # cAdvisor — container metrics (deployed globally via Swarm)
+  # Uses Docker Swarm SD (same pattern as node-exporter) to inject node_name label,
+  # which dashboard variables use to identify hosts.
+  - job_name: 'cadvisor'
+    dockerswarm_sd_configs:
+      - host: unix:///var/run/docker.sock
+        role: tasks
+        filters:
+          - name: service
+            values: ['observability_cadvisor']
+    relabel_configs:
+      # Only keep running tasks
+      - source_labels: [__meta_dockerswarm_task_desired_state]
+        regex: running
+        action: keep
+      # Replace default port with cAdvisor's actual port
+      - source_labels: [__address__]
+        regex: '(.+):\d+'
+        target_label: __address__
+        replacement: '${1}:8080'
+      # Inject human-readable node hostname (used by dashboard host variable)
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        target_label: node_name
+      # Drop the quorum-only witness
+      - source_labels: [__meta_dockerswarm_node_hostname]
+        regex: 'swarm-witness'
+        action: drop
 
   # Loki — log aggregation system metrics
   - job_name: 'loki'

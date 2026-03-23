@@ -6,11 +6,13 @@ services:
       - AUTH_PROVIDER=credentials
       - BASE_URL=https://home.${BASE_DOMAIN}
       - TZ=${TZ}
-      # Set both legacy DB_* and current DATABASE_* vars to Postgres.
-      # The image ships DB_* sqlite defaults which can otherwise win.
-      - DB_DIALECT=postgres
+      # Override the image's sqlite defaults for Postgres.
+      # DB_DRIVER must be one of better-sqlite3 | mysql2 | node-postgres (validated by migrate.cjs/tasks.cjs).
+      # DB_DIALECT must match the migration subdirectory name in the image.
+      - DB_DRIVER=node-postgres
+      - DB_DIALECT=postgresql
       - DB_URL=postgresql://homarr:${HOMARR_DB_PASS}@homarr-db:5432/homarr
-      - DATABASE_DIALECT=postgres
+      - DATABASE_DIALECT=postgresql
       - DATABASE_HOST=homarr-db
       - DATABASE_PORT=5432
       - DATABASE_NAME=homarr
