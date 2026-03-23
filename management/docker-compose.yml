@@ -6,6 +6,10 @@ services:
       - AUTH_PROVIDER=credentials
       - BASE_URL=https://home.${BASE_DOMAIN}
       - TZ=${TZ}
+      # Set both legacy DB_* and current DATABASE_* vars to Postgres.
+      # The image ships DB_* sqlite defaults which can otherwise win.
+      - DB_DIALECT=postgres
+      - DB_URL=postgresql://homarr:${HOMARR_DB_PASS}@homarr-db:5432/homarr
       - DATABASE_DIALECT=postgres
       - DATABASE_HOST=homarr-db
       - DATABASE_PORT=5432

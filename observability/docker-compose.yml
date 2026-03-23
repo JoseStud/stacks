@@ -15,7 +15,9 @@ services:
       update_config:
         parallelism: 1
         delay: 10s
-        order: start-first
+        # Prometheus TSDB uses an exclusive lock; avoid overlapping old/new tasks on the same volume.
+        order: stop-first
+        monitor: 2m
       placement:
         constraints:
           - node.labels.location == cloud
@@ -44,6 +46,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   loki:
     image: grafana/loki:3.6.7
