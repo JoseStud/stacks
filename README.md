@@ -17,6 +17,7 @@ stacks/
 │   └── config/                  #   Prometheus, Loki, Promtail, Alertmanager configs
 ├── media/
 │   └── ai-interface/            # Open WebUI + OpenClaw
+├── home-dashboard/              # Tunet Home Assistant dashboard
 ├── uptime/                      # Uptime Kuma status monitoring
 └── cloud/                       # FileBrowser (GlusterFS file manager)
 ```
@@ -38,6 +39,7 @@ Stacks with bind-mounted configs (`auth`, `observability`) include a `config/` s
 | **network** | vaultwarden, vaultwarden-db, pihole-1, pihole-2, orbital-sync | Yes | gateway, auth | -- |
 | **observability** | prometheus, loki, promtail, node-exporter, grafana, alertmanager | Yes | gateway, auth | -- |
 | **ai-interface** | open-webui, openclaw | Yes | gateway, auth | -- |
+| **home-dashboard** | tunet | Yes | gateway, auth | `/api/health` |
 | **uptime** | uptime-kuma | Yes | gateway, auth | -- |
 | **cloud** | filebrowser | Yes | gateway, auth | -- |
 

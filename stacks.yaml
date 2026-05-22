@@ -37,6 +37,14 @@ stacks:
     portainer_managed: true
     depends_on: [gateway, auth]
 
+  home-dashboard:
+    compose_path: home-dashboard/docker-compose.yml
+    portainer_managed: true
+    depends_on: [gateway, auth]
+    healthcheck_url: https://tunet.{{ .Env.BASE_DOMAIN }}/api/health
+    healthcheck_expected_status: 200
+    healthcheck_timeout_seconds: 300
+
   uptime:
     compose_path: uptime/docker-compose.yml
     portainer_managed: true

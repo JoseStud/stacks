@@ -94,6 +94,14 @@ templates:
     config:
       polling-interval: 60s
 
+  # Home Dashboard — Tunet
+  # Host-rendered env file for break-glass direct deploys; the Portainer stack
+  # environment itself is managed via Terraform.
+  - source-path: "/opt/stacks/home-dashboard/.env.tmpl"
+    destination-path: "/opt/stacks/home-dashboard/.env"
+    config:
+      polling-interval: 60s
+
   # Uptime — Uptime Kuma
   # Host-rendered env file for break-glass direct deploys; the Portainer stack
   # environment itself is managed via Terraform.
