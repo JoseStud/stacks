@@ -29,7 +29,7 @@ services:
         reservations:
           memory: 128M
       restart_policy:
-        condition: on-failure
+        condition: any
         delay: 10s
         max_attempts: 15
         window: 2m
@@ -78,7 +78,7 @@ services:
         reservations:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:
@@ -132,7 +132,7 @@ services:
         limits:
           memory: 512M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.pihole.rule=Host(`dns.${BASE_DOMAIN}`)"
@@ -188,7 +188,7 @@ services:
         limits:
           memory: 512M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.pihole-2.rule=Host(`dns2.${BASE_DOMAIN}`)"
@@ -232,7 +232,7 @@ services:
         limits:
           memory: 128M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:

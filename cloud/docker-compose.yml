@@ -20,7 +20,7 @@ services:
         limits:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.filebrowser.rule=Host(`files.${BASE_DOMAIN}`)"

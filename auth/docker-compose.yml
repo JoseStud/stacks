@@ -63,7 +63,7 @@ services:
         reservations:
           memory: 128M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.authelia.rule=Host(`auth.${BASE_DOMAIN}`)"
@@ -110,7 +110,7 @@ services:
         reservations:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:

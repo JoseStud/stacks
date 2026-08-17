@@ -32,7 +32,7 @@ services:
         reservations:
           memory: 512M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.prometheus.rule=Host(`prometheus.${BASE_DOMAIN}`)"
@@ -78,7 +78,7 @@ services:
         reservations:
           memory: 512M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:
@@ -152,7 +152,7 @@ services:
         reservations:
           memory: 64M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:
@@ -186,7 +186,7 @@ services:
         reservations:
           memory: 128M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:
@@ -240,7 +240,7 @@ services:
         reservations:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.grafana.rule=Host(`grafana.${BASE_DOMAIN}`)"
@@ -287,7 +287,7 @@ services:
         reservations:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:
@@ -325,7 +325,7 @@ services:
         reservations:
           memory: 128M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.alertmanager.rule=Host(`alertmanager.${BASE_DOMAIN}`)"

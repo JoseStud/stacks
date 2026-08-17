@@ -28,7 +28,7 @@ services:
         reservations:
           memory: 128M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.tunet.rule=Host(`tunet.${BASE_DOMAIN}`)"
