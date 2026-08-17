@@ -26,7 +26,7 @@ services:
         limits:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.uptime-kuma.rule=Host(`status.${BASE_DOMAIN}`)"
@@ -69,7 +69,7 @@ services:
         reservations:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:

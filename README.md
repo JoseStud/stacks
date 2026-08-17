@@ -53,6 +53,7 @@ All stacks follow these patterns:
 - **Auth** — `authelia@swarm` ForwardAuth middleware on protected routes
 - **Domains** — `${BASE_DOMAIN}` variable injected by Infisical Agent
 - **Updates** — `order: start-first` for zero-downtime rolling updates
+- **Restarts** — `restart_policy.condition: any`. Do not use `on-failure`: Swarm only reschedules a task on a *non-zero* exit under that condition, so a graceful stop (host reboot, OOM-kill during shutdown, manual `docker stop`) exits `0` and the service is left parked at 0 replicas indefinitely — this bit us in August 2026 when a node reboot silently took down Vaultwarden, Grafana, and Open WebUI for two months until someone noticed and ran `docker service update --force` manually
 - **Resources** — Memory limits on every service; reservations on stateful or heavier workloads so Swarm can place them without overcommitting a node
 - **Logging** — `json-file` driver, 10 MB rotation, 3 files max
 - **Storage** — Most persistent data on GlusterFS at `/mnt/swarm-shared/<stack>/`; write-heavy pinned services can use node-local block-volume paths under `/mnt/app_data/local/<stack>/`

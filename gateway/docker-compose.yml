@@ -22,7 +22,7 @@ services:
         limits:
           memory: 128M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:
@@ -54,7 +54,7 @@ services:
         limits:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.gateway-health.rule=Host(`gateway-health.${BASE_DOMAIN}`) && Path(`/healthz`)"

@@ -25,7 +25,7 @@ services:
         reservations:
           memory: 1G
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.openwebui.rule=Host(`ai.${BASE_DOMAIN}`)"
@@ -73,7 +73,7 @@ services:
         reservations:
           memory: 256M
       restart_policy:
-        condition: on-failure
+        condition: any
     logging:
       driver: json-file
       options:
@@ -112,7 +112,7 @@ services:
           cpus: "1.0"
           memory: 2G
       restart_policy:
-        condition: on-failure
+        condition: any
       labels:
         - "traefik.enable=true"
         - "traefik.http.routers.openclaw.rule=Host(`openclaw.${BASE_DOMAIN}`)"
