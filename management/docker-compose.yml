@@ -1,6 +1,6 @@
 services:
   homarr:
-    image: ghcr.io/homarr-labs/homarr:v1.56.1
+    image: ghcr.io/homarr-labs/homarr:v1.75.0
     environment:
       - SECRET_ENCRYPTION_KEY=${HOMARR_SECRET_KEY}
       - AUTH_PROVIDER=credentials
@@ -58,7 +58,7 @@ services:
       retries: 5
 
   homarr-db:
-    image: postgres:18.3-alpine
+    image: postgres:18.6-alpine
     environment:
       - PGDATA=/var/lib/postgresql/data
       - POSTGRES_USER=homarr
@@ -96,7 +96,7 @@ services:
       retries: 5
 
   portainer-server:
-    image: portainer/portainer-ee:2.39.1
+    image: portainer/portainer-ee:2.39.6
     command: -H tcp://tasks.portainer-agent:9001 --tlsskipverify --admin-password "${PORTAINER_ADMIN_PASSWORD_HASH}"
     ports:
       - target: 9000
@@ -141,7 +141,7 @@ services:
         max-file: "3"
 
   portainer-agent:
-    image: portainer/agent:2.39.1
+    image: portainer/agent:2.39.6
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/lib/docker/volumes:/var/lib/docker/volumes
