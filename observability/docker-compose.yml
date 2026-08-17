@@ -53,7 +53,7 @@ services:
       start_period: 30s
 
   loki:
-    image: grafana/loki:3.6.7
+    image: grafana/loki:3.6.15
     volumes:
       - /mnt/swarm-shared/observability/loki:/etc/loki:ro
       # Keep Loki WAL/TSDB on the node-local block volume; GlusterFS adds fsync latency.
@@ -91,7 +91,7 @@ services:
       disable: true
 
   promtail:
-    image: grafana/promtail:3.6.7
+    image: grafana/promtail:3.6.11
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -128,7 +128,7 @@ services:
       start_period: 15s
 
   node-exporter:
-    image: prom/node-exporter:v1.10.2
+    image: prom/node-exporter:v1.12.1
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -165,7 +165,7 @@ services:
       retries: 3
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    image: gcr.io/cadvisor/cadvisor:v0.55.1
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
@@ -199,7 +199,7 @@ services:
       retries: 3
 
   grafana:
-    image: grafana/grafana:12.4.1
+    image: grafana/grafana:12.4.8
     environment:
       - GF_SERVER_ROOT_URL=https://grafana.${BASE_DOMAIN}
       - GF_DATABASE_TYPE=postgres
@@ -260,7 +260,7 @@ services:
       retries: 3
 
   grafana-db:
-    image: postgres:18.3-alpine
+    image: postgres:18.6-alpine
     stop_grace_period: 2m
     environment:
       - PGDATA=/var/lib/postgresql/data
@@ -301,7 +301,7 @@ services:
       retries: 5
 
   alertmanager:
-    image: prom/alertmanager:v0.31.1
+    image: prom/alertmanager:v0.34.0
     volumes:
       - /mnt/swarm-shared/observability/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - alertmanager_data:/alertmanager
