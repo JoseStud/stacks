@@ -39,6 +39,9 @@ services:
         - "traefik.http.routers.vaultwarden.entrypoints=websecure"
         - "traefik.http.routers.vaultwarden.tls.certresolver=letsencrypt"
         - "traefik.http.services.vaultwarden.loadbalancer.server.port=80"
+        - "traefik.http.services.vaultwarden.loadbalancer.healthcheck.path=/alive"
+        - "traefik.http.services.vaultwarden.loadbalancer.healthcheck.interval=10s"
+        - "traefik.http.services.vaultwarden.loadbalancer.healthcheck.timeout=5s"
     logging:
       driver: json-file
       options:
