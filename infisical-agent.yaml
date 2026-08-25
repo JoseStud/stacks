@@ -20,6 +20,14 @@ templates:
     config:
       polling-interval: 60s
 
+  # Gateway — Traefik dynamic config (external/non-Swarm backends)
+  # Rendered straight onto GlusterFS-shared storage; Traefik's file
+  # provider watches this path directly, so no reload/sync step is needed.
+  - source-path: "/opt/stacks/gateway/config/dynamic/homeassistant.yml.tmpl"
+    destination-path: "/mnt/swarm-shared/gateway/traefik_dynamic/homeassistant.yml"
+    config:
+      polling-interval: 60s
+
   # Identity — Authelia SSO
   # Host-rendered env file for break-glass direct deploys; the Portainer stack
   # environment itself is managed via Terraform.
