@@ -1,0 +1,23 @@
+# Home Assistant — external backend (not a Swarm service)
+# Rendered by the Infisical Agent directly onto GlusterFS-shared storage at:
+#   /mnt/swarm-shared/gateway/traefik_dynamic/homeassistant.yml
+# Traefik's file provider (--providers.file.watch=true) picks up changes
+# to that path automatically on both replicas — no reload/sync step needed.
+#
+# Backend runs on the "anxirpi" Raspberry Pi, reachable only over the
+# Tailscale mesh at its stable tailnet IP (100.68.30.71:8123).
+{{- $bd := getSecretByName "__INFISICAL_PROJECT_ID__" "__INFISICAL_ENV__" "/infrastructure" "BASE_DOMAIN" }}
+http:
+  routers:
+    homeassistant:
+      rule: "Host(`ha.{{ $bd.Value }}`)"
+      entrypoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      service: homeassistant
+  services:
+    homeassistant:
+      loadBalancer:
+        servers:
+          - url: "http://100.68.30.71:8123"
