@@ -1,6 +1,10 @@
 services:
   tunet:
-    image: ghcr.io/oyvhov/tunet:latest
+    # Upstream ghcr.io/oyvhov/tunet is amd64-only (its docker-publish.yml has
+    # no multi-arch/buildx setup); our workers are arm64, so this stack was
+    # permanently unschedulable. Rebuilt from the same source revision
+    # (c8d07a028a8c6510463e468b5c1a1406a23246cc) natively for arm64.
+    image: ghcr.io/josestud/tunet:1.21.1-arm64
     environment:
       - NODE_ENV=production
       - PORT=3002
